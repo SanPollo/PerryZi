@@ -187,7 +187,7 @@ bool RealTimeClock::reset()
   nextNTPMillis = millis();
   tzCode = 0;
   format="%M/%d/%yyyy %h:%mm:%ss%aa %z";
-  ntpServerName = "time.nist.gov";
+  ntpServerName = "uk.pool.ntp.org";
   return true;
 }
 
