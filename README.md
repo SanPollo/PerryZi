@@ -12,9 +12,7 @@ PerryZi is licensed under the Apache License 2.0. Please see the [LICENSE](LICEN
 
 <br>
 
-## Coming soon
+## Usage
 
-* Binaries
-* Upload instructions
-* Build instructions
-* Full Command Reference
+* [Uploading the Firmware](wiki/Uploading-the-Firmware)
+* [Command Reference](wiki/Command-Reference)
