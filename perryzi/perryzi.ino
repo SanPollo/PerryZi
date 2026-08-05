@@ -124,10 +124,6 @@ class ZMode
 #if INCLUDE_SD_SHELL
 #  if INCLUDE_FTP
 #  endif
-#  include "proto_xmodem.h"
-#  include "proto_zmodem.h"
-#  include "proto_punter.h"
-#  include "proto_kermit.h"
 #endif
 #if INCLUDE_SLIP
 #  include "zslipmode.h"

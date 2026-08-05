@@ -1109,7 +1109,7 @@ ZResult ZCommand::doConnectCommand(int vval, uint8_t *vbuf, int vlen, bool isNum
       logPrintln("ConnList0:\r\n");
     else
       logPrintfln("ConnSwitchTo: %d",vval);
-    if(strlen(dmodifiers)>0) // would be nice to allow petscii/telnet changes here, but need more flags
+    if(strlen(dmodifiers)>0) // would be nice to allow telnet changes here, but need more flags
       return ZERROR;
     WiFiClientNode *c=conns;
     if(vval > 0)
@@ -1388,7 +1388,7 @@ ZResult ZCommand::doWebDump(Stream *in, int len, const bool cacheFlag)
           case BTYPE_HEX_PLUS:
           {
             const char *hbuf = TOHEX((uint8_t)c);
-            serial.printb(hbuf[0]); // prevents petscii
+            serial.printb(hbuf[0]);
             serial.printb(hbuf[1]);
             if((++bct)>=39)
             {
@@ -3162,38 +3162,6 @@ ZResult ZCommand::doSerialCommand()
             result=ZOK;
           }
           break;
-        case 'h':
-        {
-          char filename[50];
-          sprintf(filename,"/c64net-help-%s.txt",PERRYZI_VERSION);
-          if(vval == 6502)
-          {
-            SPIFFS.remove(filename);
-            result=ZOK;
-          }
-          else
-          {
-            int oldDelay = serialDelayMs;
-            serialDelayMs = vval;
-            uint8_t buf[100];
-            sprintf((char *)buf,"www.zimmers.net:80/otherprojs%s",filename);
-            serial.prints("Control-C to Abort.");
-            serial.prints(EOLN);
-            result = doWebStream(0,buf,strlen((char *)buf),false,filename,true);
-            serialDelayMs = oldDelay;
-            if((result == ZERROR)
-            &&(WiFi.status() != WL_CONNECTED))
-            {
-              serial.prints("Not Connected.");
-              serial.prints(EOLN);
-              serial.prints("Use ATW to list access points.");
-              serial.prints(EOLN);
-              serial.prints("ATW\"[SSI],[PASSWORD]\" to connect.");
-              serial.prints(EOLN);
-            }
-          }
-          break;
-        }
         case 'g':
           result = doWebStream(vval,vbuf,vlen,isNumber,"/temp.web",false);
           break;
@@ -3547,7 +3515,7 @@ void ZCommand::packetOut(uint8_t id, uint8_t *buf, uint16_t bufLen, uint8_t num)
       case BTYPE_HEX_PLUS:
       {
         const char *hbuf = TOHEX(c);
-        serial.printb(hbuf[0]); // prevents petscii
+        serial.printb(hbuf[0]);
         serial.printb(hbuf[1]);
         if((++bct)>=39)
         {
