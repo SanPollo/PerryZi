@@ -80,9 +80,8 @@ enum ConfigOptions
   CFG_BUSYMSG=37,
   CFG_S62_TELNET=38,
   CFG_S63_HANGUP=39,
-  CFG_ALTOPMODE=40,
-  CFG_S64_DROPNULL=41,
-  CFG_LAST=41
+  CFG_S64_DROPNULL=40,
+  CFG_LAST=40
 };
 
 const ConfigOptions v2HexCfgs[] = {
@@ -100,14 +99,6 @@ enum BinType
   BTYPE_HEX_PLUS    = 5,
   BTYPE_DEC_PLUS    = 6,
   BTYPE_INVALID     = 7
-};
-
-enum OpModes
-{
-  OPMODE_NONE,
-  OPMODE_1650,
-  OPMODE_1660,
-  OPMODE_1670
 };
 
 class ZCommand : public ZMode
@@ -153,11 +144,6 @@ class ZCommand : public ZMode
     String          previousCommand      = "";
     int             lastPacketId         = -1;
 
-    unsigned long   lastPulseTimeMs      = 0;
-    int             lastPulseState       = DEFAULT_OTH_INACTIVE;
-    unsigned int    pulseWork            = 0;
-    String          pulseBuf             = "";
-
     byte CRC8(const byte *data, byte len);
 
     void showInitMessage();
@@ -169,7 +155,6 @@ class ZCommand : public ZMode
     void parseConfigOptions(String configArguments[]);
     void setOptionsFromSavedConfig(String configArguments[]);
     bool reSaveConfig(int retries);
-    void setAltOpModeAdjustments();
     int pinStatusDecoder(int pinActive, int pinInactive);
     int getStatusRegister(const int snum, int crc8);
     ZResult setStatusRegister(const int snum, const int sval, int *crc8, const ZResult oldRes);
@@ -181,13 +166,12 @@ class ZCommand : public ZMode
     void sendNextPacket();
     void connectionArgs(WiFiClientNode *c);
     void updateAutoAnswer();
-    void checkPulseDial();
     uint8_t *doStateMachine(uint8_t *buf, uint16_t *bufLen, char **machineState, String *machineQue, char *stateMachine);
     uint8_t *doMaskOuts(uint8_t *buf, uint16_t *bufLen, char *maskOuts);
     ZResult doWebDump(Stream *in, int len, const bool cacheFlag);
     ZResult doWebDump(const char *filename, const bool cache);
 
-    ZResult doResetCommand(bool resetOpMode);
+    ZResult doResetCommand();
     ZResult doNoListenCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber);
     ZResult doBaudCommand(int vval, uint8_t *vbuf, int vlen);
     ZResult doTransmitCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber, const char *dmodifiers, int *crc8);

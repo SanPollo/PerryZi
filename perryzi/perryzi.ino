@@ -121,10 +121,6 @@ class ZMode
 #include "zcommand.h"
 #include "zprint.h"
 
-#if INCLUDE_SD_SHELL
-#  if INCLUDE_FTP
-#  endif
-#endif
 #if INCLUDE_SLIP
 #  include "zslipmode.h"
 #endif
@@ -144,17 +140,12 @@ static String termType = DEFAULT_TERMTYPE;
 static String busyMsg = DEFAULT_BUSYMSG;
 static bool debugUart = false;
 
-static OpModes altOpMode = OPMODE_NONE;
 static ZMode *currMode = null;
 static ZStream streamMode;
 static ZCommand commandMode;
 static ZPrint printMode;
 static ZConfig configMode;
 static RealTimeClock zclock(0);
-#if INCLUDE_SD_SHELL
-#  if INCLUDE_FTP
-#  endif
-#endif
 #if INCLUDE_SLIP
    static ZSLIPMode slipMode;
 #endif

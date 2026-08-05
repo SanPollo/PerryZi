@@ -94,9 +94,8 @@ static bool validateHostInfo(uint8_t *vbuf)
 
 void ZCommand::reset()
 {
-  doResetCommand(true);
-  if(altOpMode == OPMODE_NONE)
-    showInitMessage();
+  doResetCommand();
+  showInitMessage();
 }
 
 byte ZCommand::CRC8(const byte *data, byte len) 
@@ -136,7 +135,6 @@ byte ZCommand::CRC8(const byte *data, byte len)
 
 void ZCommand::setConfigDefaults()
 {
-  altOpMode = OPMODE_NONE;
   doEcho=true;
   busyMode=false;
   autoStreamMode=false; // should prob have been true all along, ats0 takes care of this.
@@ -254,7 +252,7 @@ void ZCommand::connectionArgs(WiFiClientNode *c)
   c->machineState = c->stateMachine;
 }
 
-ZResult ZCommand::doResetCommand(bool resetOpMode)
+ZResult ZCommand::doResetCommand()
 {
   while(conns != null)
   {
@@ -264,7 +262,6 @@ ZResult ZCommand::doResetCommand(bool resetOpMode)
   current = null;
   nextConn = null;
   WiFiServerNode::DestroyAllServers();
-  OpModes oldMode = altOpMode;
   setConfigDefaults();
   String argv[CFG_LAST+1];
   parseConfigOptions(argv);
@@ -274,8 +271,6 @@ ZResult ZCommand::doResetCommand(bool resetOpMode)
   serialDelayMs=0;
   binType=BTYPE_NORMAL;
   serial.setFlowControlType(DEFAULT_FCT);
-  if(!resetOpMode)
-    argv[CFG_ALTOPMODE] = String(oldMode);
    setOptionsFromSavedConfig(argv);
   memset(nbuf,0,MAX_COMMAND_SIZE);
   busyMode=false;
@@ -400,7 +395,7 @@ bool ZCommand::reSaveConfig(int retries)
   f.printf("%s,%s,%s,",zclockFormathex.c_str(),zclockHosthex.c_str(),hostnamehex.c_str());
   f.printf("%d,%s,%s,",printMode.getTimeoutDelayMs(),printSpechex.c_str(),termTypehex.c_str());
   f.printf("%s,%s,%s,%s,",staticIPstr.c_str(),staticDNSstr.c_str(),staticGWstr.c_str(),staticSNstr.c_str());
-  f.printf("%s,%d,%d,%d,%d",busyMsghex.c_str(),telnetSupport,streamMode.getHangupType(),altOpMode,dropNull);
+  f.printf("%s,%d,%d,%d",busyMsghex.c_str(),telnetSupport,streamMode.getHangupType(),dropNull);
   f.close();
   delay(500);
   if(SPIFFS.exists(CONFIG_FILE))
@@ -549,11 +544,6 @@ void ZCommand::setOptionsFromSavedConfig(String configArguments[])
     termType = configArguments[CFG_TERMTYPE];
   if(configArguments[CFG_BUSYMSG].length()>0)
     busyMsg = configArguments[CFG_BUSYMSG];
-  if(configArguments[CFG_ALTOPMODE].length()>0)
-  {
-    altOpMode = (OpModes)atoi(configArguments[CFG_ALTOPMODE].c_str());
-    setAltOpModeAdjustments();
-  }
   updateAutoAnswer();
 }
 
@@ -627,88 +617,9 @@ void ZCommand::loadConfig()
     nextReconnectDelay = DEFAULT_RECONNECT_DELAY;
   }
   debugPrintf("Resetting...\r\n");
-  doResetCommand(true);
-  if(altOpMode == OPMODE_NONE)
-    showInitMessage();
+  doResetCommand();
+  showInitMessage();
   debugPrintf("Init complete.\r\n");
-}
-
-void ZCommand::setAltOpModeAdjustments()
-{
-  switch(altOpMode)
-  {
-  case OPMODE_1650:
-  {
-    suppressResponses=true;
-    doEcho=false;
-    busyMode=false;
-    autoStreamMode=true;
-    telnetSupport=false;
-    streamMode.setDefaultEcho(false);
-    streamMode.setHangupType(HANGUP_PDP);
-    ringCounter=1;
-    serial.setFlowControlType(FCT_DISABLED);
-    if(baudRate != 300)
-    {
-      baudRate=300;
-      changeBaudRate(baudRate);
-    }
-    riActive = HIGH; // remember, this are inverted, so active LOW
-    riInactive = LOW;
-    s_pinWrite(pinRI,riInactive); // drive it high
-    othActive = DEFAULT_OTH_ACTIVE;
-    othInactive = DEFAULT_OTH_INACTIVE;
-    dcdActive = HIGH;
-    dcdInactive = LOW;
-    checkOpenConnections();
-    break;
-  }
-  case OPMODE_1660:
-  {
-    suppressResponses=true;
-    doEcho=false;
-    busyMode=false;
-    autoStreamMode=true;
-    telnetSupport=false;
-    streamMode.setDefaultEcho(false);
-    streamMode.setHangupType(HANGUP_PDP);
-    ringCounter=1;
-    serial.setFlowControlType(FCT_DISABLED);
-    if(baudRate != 300)
-    {
-      baudRate=300;
-      changeBaudRate(baudRate);
-    }
-    riActive = HIGH; // remember, this are inverted, so active LOW
-    riInactive = LOW;
-    s_pinWrite(pinRI,riInactive); // drive it high
-    othActive = DEFAULT_OTH_INACTIVE;
-    othInactive = DEFAULT_OTH_ACTIVE;
-    checkOpenConnections();
-    break;
-  }
-  case OPMODE_1670:
-  {
-    busyMode=false;
-    autoStreamMode=true;
-    telnetSupport=false;
-    streamMode.setDefaultEcho(false);
-    streamMode.setHangupType(HANGUP_PPPHARD);
-    serial.setXON(true);
-    packetXOn = true;
-    if(baudRate != 1200)
-    {
-      baudRate=1200;
-      changeBaudRate(baudRate);
-    }
-    dcdActive = HIGH;
-    dcdInactive = LOW;
-    checkOpenConnections();
-    break;
-  }
-  default:
-    break;
-  }
 }
 
 ZResult ZCommand::doInfoCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber)
@@ -724,20 +635,6 @@ ZResult ZCommand::doInfoCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber
   case 5:
   {
     bool showAll = (vval==5);
-    switch(altOpMode)
-    {
-      case OPMODE_NONE:
-        break;
-      case OPMODE_1650:
-        serial.prints("1650:");
-        break;
-      case OPMODE_1660:
-        serial.prints("1660:");
-        break;
-      case OPMODE_1670:
-        serial.prints("1670:");
-        break;
-    }
     serial.prints("AT");
     serial.prints("B");
     serial.printi(baudRate);
@@ -2654,7 +2551,7 @@ ZResult ZCommand::doSerialCommand()
       switch(lastCmd)
       {
       case 'z':
-        result = doResetCommand(false);
+        result = doResetCommand();
         break;
       case 'n':
         doNoListenCommand(vval,vbuf,vlen,isNumber);
@@ -2669,12 +2566,6 @@ ZResult ZCommand::doSerialCommand()
           doEcho=(vval > 0);
         break;
       case 'f':
-        if(altOpMode != OPMODE_NONE)
-        {
-          streamMode.setDefaultEcho((isNumber && vval == 0));
-          break;
-        }
-        else
         if((!isNumber)||(vval>=FCT_INVALID))
           result=ZERROR;
         else
@@ -2799,29 +2690,6 @@ ZResult ZCommand::doSerialCommand()
             configMode.switchTo();
             result = ZOK;
         }
-#  if INCLUDE_CBMMODEM
-        else
-        if(strstr((const char *)vbuf,"1650")==(char *)vbuf)
-        {
-          altOpMode=OPMODE_1650;
-          setAltOpModeAdjustments();
-          result = ZOK;
-        }
-        else
-        if(strstr((const char *)vbuf,"1660")==(char *)vbuf)
-        {
-          altOpMode=OPMODE_1660;
-          setAltOpModeAdjustments();
-          result = ZOK;
-        }
-        else
-        if(strstr((const char *)vbuf,"1670")==(char *)vbuf)
-        {
-          altOpMode=OPMODE_1670;
-          setAltOpModeAdjustments();
-          result = ZOK;
-        }
-#  endif
 #  if INCLUDE_IRCC
         else
         if((strstr((const char *)vbuf,"irc")==(char *)vbuf))
@@ -2978,9 +2846,8 @@ ZResult ZCommand::doSerialCommand()
             staticSN = null;
             delay(500);
             zclock.reset();
-            result=doResetCommand(true);
-            if(altOpMode == OPMODE_NONE)
-              showInitMessage();
+            result=doResetCommand();
+            showInitMessage();
           }
           break;
         case 'm':
@@ -3619,8 +3486,7 @@ bool ZCommand::checkPlusPlusPlusDisconnect()
 
 void ZCommand::sendNextPacket()
 {
-  if((serial.availableForWrite()<packetSize)
-  ||(altOpMode != OPMODE_NONE))
+  if(serial.availableForWrite()<packetSize)
     return;
 
   WiFiClientNode *firstConn = nextConn;
@@ -3791,8 +3657,6 @@ void ZCommand::sendNextPacket()
 
 void ZCommand::sendConnectionNotice(int id)
 {
-  if((altOpMode == OPMODE_1650)||(altOpMode == OPMODE_1660))
-    return;
   preEOLN(EOLN);
   if(numericResponses)
   {
@@ -3950,115 +3814,6 @@ bool ZCommand::acceptNewConnection()
   return currMode != this;
 }
 
-void ZCommand::checkPulseDial()
-{
-#if INCLUDE_CBMMODEM
-  if(pinSupport[pinOTH])
-  {
-    /*
-     * One 'pulse' is:
-     * 1->0 over 50 ms
-     * 0->1 over 50ms
-     * (repeat)
-     * if 1->0 lasts 300-320ms, it is between numbers
-     */
-    int bit = digitalRead(pinOTH);
-    if(bit != lastPulseState)
-    {
-      if(lastPulseTimeMs == 0)
-          lastPulseTimeMs = millis();
-      else
-      if(bit == othActive)
-      {
-        unsigned short diff = (millis()-lastPulseTimeMs);
-        if((diff > 15) && (diff < 60))
-        {
-          if(pulseWork < 10)
-            pulseWork++;
-          else
-          {
-              logPrintf("\n\rP.D.: ERROR -- OVERPULSE!\n\r");
-              pulseBuf = ""; // error out
-              pulseWork = 0;
-              return;
-          }
-        }
-        else
-        {
-          logPrintf("\n\rP.D.: ERROR (%u ms)!\n\r",(unsigned int)diff);
-          pulseBuf = ""; // error out
-          lastPulseTimeMs = 0;
-          pulseWork = 0;
-          return;
-        }
-      }
-      else
-      if(bit == othInactive)
-      {
-        unsigned short diff = (millis()-lastPulseTimeMs);
-        if((diff > 225)
-        && (diff < 350)
-        && (pulseWork > 0))
-        {
-            char nums[2];
-            if(pulseWork > 9)
-              sprintf(nums,"0");
-            else
-              sprintf(nums,"%u",pulseWork);
-            debugPrintf("\n\rP.D.: got digit: %u\n\r",(unsigned int)pulseWork);
-            pulseBuf += nums;
-            pulseWork=0;
-        }
-        else
-        if((diff > 15)
-        && (diff < 60))
-        {} // between bits
-        else
-          logPrintf("\n\rP.D.: Ignoring FAIL (%u)\n\r",(unsigned int)diff);
-        //else if this happens too quickly, do nothing
-      }
-      lastPulseState = bit;
-      lastPulseTimeMs = millis();
-    }
-    else
-    if((lastPulseTimeMs != 0)
-    &&((millis() - lastPulseTimeMs) > 350))
-    {
-      if(pulseWork > 0)
-      {
-        char nums[2];
-        if(pulseWork > 9)
-          sprintf(nums,"0");
-        else
-          sprintf(nums,"%u",pulseWork);
-        debugPrintf("\n\rP.D.: got digit: %u\n\r",(unsigned int)pulseWork);
-        pulseBuf += nums;
-        pulseWork = 0;
-        lastPulseTimeMs = millis();
-        if(pulseBuf.length() > 2) //2 digits is minimum to prevent false dials
-        {
-          unsigned long vval = atoi(pulseBuf.c_str());
-          PhoneBookEntry *pb=PhoneBookEntry::findPhonebookEntry(vval);
-          if(pb != null)
-          {
-            logPrintf("\n\rP.D.: Dialing: %lu\n\r",vval);
-            doDialStreamCommand(vval, (uint8_t *)pulseBuf.c_str(), pulseBuf.length(), true, "");
-            pulseBuf = "";
-            lastPulseTimeMs = 0;
-          }
-        }
-      }
-      else
-      {
-        pulseBuf = "";
-        lastPulseTimeMs = 0;
-      }
-    }
-  }
-#endif
-}
-
-
 void ZCommand::serialIncoming()
 {
   bool crReceived=readSerialStream();
@@ -4082,9 +3837,6 @@ void ZCommand::loop()
     sendNextPacket();
     serialOutDeque();
   }
-#if INCLUDE_CBMMODEM
-  checkPulseDial();
-#endif
   checkBaudChange();
   logFileLoop();
 }
