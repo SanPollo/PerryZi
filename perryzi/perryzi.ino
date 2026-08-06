@@ -46,7 +46,7 @@ const char compile_date[] = __DATE__ " " __TIME__;
 # define DEFAULT_WIFI_INACTIVE HIGH
 #endif
 
-#define DEFAULT_BAUD_RATE 19200
+#define DEFAULT_BAUD_RATE 38400
 #define DEFAULT_SERIAL_CONFIG SERIAL_8N1
 #define RX_BUFFER_SIZE 4096
 
@@ -54,11 +54,16 @@ const char compile_date[] = __DATE__ " " __TIME__;
 #if defined(ARDUINO_ESP8266_WEMOS_D1MINI)
 #define DEFAULT_PIN_RTS 15  // WeMos D1 Mini: GPIO15 (D8) -> RTS
 #define DEFAULT_PIN_CTS 13  // WeMos D1 Mini: GPIO13 (D7) -> CTS
+// PerryFi 1.0 hardware (CPS8256: 8253 baud generator + Z80 DART) cannot
+// reliably exceed 9600 baud, so the ATB command is capped on this board.
+static const bool LIMIT9600 = true;
 
 // PerryFi 2.1 pin configuration (ESP-12F)
 #elif defined(ARDUINO_ESP8266_GENERIC)
 #define DEFAULT_PIN_RTS 13  // ESP-12F PerryFi: GPIO13 -> RTS
 #define DEFAULT_PIN_CTS 4   // ESP-12F PerryFi: GPIO4  -> CTS
+// PerryFi 2.1 hardware runs up to 115200 baud, so no ATB cap is required.
+static const bool LIMIT9600 = false;
 
 // Prevent building on other boards.
 #else

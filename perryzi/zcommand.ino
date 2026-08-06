@@ -943,6 +943,10 @@ ZResult ZCommand::doBaudCommand(int vval, uint8_t *vbuf, int vlen)
   }
   else
     baudChk=vval;
+  // PerryFi 1.0 (WeMos D1 mini): the CPS8256 8253/DART cannot exceed 9600 baud,
+  // so refuse any ATB request above that. No effect on PerryFi 2.1 (LIMIT9600==false).
+  if(LIMIT9600 && (baudChk > 9600))
+    return ZERROR;
   hwSerialFlush();
   if(baudChk != baudRate)
   {
