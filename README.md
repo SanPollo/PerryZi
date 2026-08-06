@@ -2,7 +2,7 @@
 
 ## About
 
-PerryZi is the official ESP8266 firmware for the [PerryFi](https://github.com/SanPollo/PerryFi).
+PerryZi is the official ESP8266 firmware for the PerryFi 2.1. For the PerryFi 1.0, please continue to use the [old firmware](https://github.com/SanPollo/PerryFiFW).
 
 It is a version of the [Zimodem repository](https://github.com/bozimmerman/Zimodem), forked on 21st July 2026 (pre-4.0.3), and customised for the Amstrad PCW.
 
