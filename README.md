@@ -2,11 +2,11 @@
 
 ## About
 
-PerryZi is the official ESP8266 firmware for the PerryFi 2.1. For the PerryFi 1.0, please continue to use the [old firmware](https://github.com/SanPollo/PerryFiFW).
+PerryZi is the official ESP8266 firmware for the [PerryFi](https://github.com/SanPollo/PerryFi2).
 
-It is a version of the [Zimodem repository](https://github.com/bozimmerman/Zimodem), forked on 21st July 2026 (pre-4.0.3), and customised for the Amstrad PCW.
+It is a version of the [Zimodem repository](https://github.com/bozimmerman/Zimodem), forked on 21st July 2026 (pre-4.0.3), and customised so it removes any Commodore-specific, and ESP32-specific modes so it can be used with the Amstrad PCW. It also maintains NIST compatibility with RetroWifiModem.
 
-This firmware replaces the [RetroWiFiModem-based firmware](https://github.com/SanPollo/PerryFiFW), which is now considered obsolete.
+This firmware replaces the [RetroWiFiModem-based firmware](https://github.com/SanPollo/PerryFiFW) for the PerryFi, which is now considered obsolete.
 
 PerryZi is licensed under the Apache License 2.0. Please see the [LICENSE](LICENSE) file for more information.
 
@@ -16,3 +16,5 @@ PerryZi is licensed under the Apache License 2.0. Please see the [LICENSE](LICEN
 
 * [Uploading the Firmware](https://github.com/SanPollo/PerryZi/wiki/Uploading-the-Firmware)
 * [Command Reference](https://github.com/SanPollo/PerryZi/wiki/Command-Reference)
+
+**NB:** After uploading the firmware to the ESP8266, the following command to configures the wifi: `AT+CONFIG`
