@@ -17,7 +17,7 @@ PerryZi is licensed under the Apache License 2.0. Please see the [LICENSE](LICEN
 * [Uploading the Firmware](https://github.com/SanPollo/PerryZi/wiki/Uploading-the-Firmware)
 * [Command Reference](https://github.com/SanPollo/PerryZi/wiki/Command-Reference)
 
-**NB:** After uploading the firmware to the ESP8266, the following command to configures the wifi: `AT+CONFIG`
+**NB:** After uploading the firmware to the ESP8266, entering the following command in a terminal program will configure the wifi: `AT+CONFIG`
 
 <br>
 
