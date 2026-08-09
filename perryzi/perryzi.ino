@@ -17,7 +17,7 @@
    limitations under the License. 
 */
 //#define TCP_SND_BUF                     4 * TCP_MSS
-#define PERRYZI_VERSION "1.0.0"
+#define PERRYZI_VERSION "1.0.1"
 const char compile_date[] = __DATE__ " " __TIME__;
 #define DEFAULT_NO_DELAY true
 #define null 0
