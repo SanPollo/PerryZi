@@ -61,7 +61,7 @@ void WiFiClientNode::constructNode(char *hostIp, int newport, int flagsBitmap, i
 void WiFiClientNode::constructNode(char *hostIp, int newport, char *username, char *password, int flagsBitmap, int ringDelay)
 {
   constructNode(hostIp, newport, flagsBitmap, ringDelay);
-# if INCLUDE_SSH
+#if INCLUDE_SSH
   if(((flagsBitmap&FLAG_SECURE)==FLAG_SECURE)
   && (username != 0))
   {
@@ -245,6 +245,7 @@ int WiFiClientNode::read()
     c = clientPtr->read();
   else
     c= client.read();
+  internalLedNetActivity();
   //fillUnderflowBuf();
   return c;
 }
@@ -338,6 +339,7 @@ int WiFiClientNode::read(uint8_t *buf, size_t size)
     bytesRead = clientPtr->read(buf,size);
   else
     bytesRead = client.read(buf,size);
+  internalLedNetActivity();
   //fillUnderflowBuf();
   return bytesRead;// + previouslyRead;
 }
@@ -404,6 +406,7 @@ size_t WiFiClientNode::write(const uint8_t *buf, size_t size)
     written += clientPtr->write(buf, size);
   else
     written += client.write(buf, size);
+  internalLedNetActivity();
   /*
   if(written < size)
   {

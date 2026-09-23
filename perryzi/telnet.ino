@@ -1,5 +1,5 @@
 /*
-   PerryZi - ESP Firmware for the Perryfi
+   PerryZi - ESP8266 Firmware for the Perryfi
    
    Copyright 2016-2026 Bo Zimmerman
    Copyright 2026 Nick J. Date

@@ -1,3 +1,23 @@
+PerryZi is distributed under two licences.
+
+   Apache License 2.0   The majority of the project, including all
+                        files derived from Bo Zimmerman's Zimodem.
+                        Reproduced in full below.
+
+   MIT License          Files written solely by Nick J. Date:
+                           perryzi/espressif.h
+                           perryzi/espressif.ino
+                           perryzi/znist.h
+                           perryzi/znist.ino
+                        Reproduced at the end of this file.
+
+Each source file carries the licence that applies to it in its header.
+Where a file has no header, the Apache License 2.0 applies.
+
+See the NOTICE file for attribution information.
+
+===============================================================================
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -199,3 +219,35 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+
+===============================================================================
+
+The following files are licensed under the MIT License:
+
+   perryzi/espressif.h
+   perryzi/espressif.ino
+   perryzi/znist.h
+   perryzi/znist.ino
+
+                               The MIT License (MIT)
+
+   Copyright (c) 2026 Nick J. Date
+
+   Permission is hereby granted, free of charge, to any person obtaining a
+   copy of this software and associated documentation files (the "Software"),
+   to deal in the Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+   and/or sell copies of the Software, and to permit persons to whom the
+   Software is furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.

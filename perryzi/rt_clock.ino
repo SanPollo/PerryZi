@@ -101,6 +101,7 @@ void RealTimeClock::tick()
       //debugPrint("Packet received, length=%d\n\r",cb);
       byte packetBuffer[ NTP_PACKET_SIZE];
       udp.read(packetBuffer, NTP_PACKET_SIZE); // read the packet into the buffer
+      internalLedNetActivity();
       // combine the four bytes (two words) into a long integer
       // this is NTP time (seconds since Jan 1 1900):
       uint32_t secsSince1900 = htonl(*((uint32_t *)(packetBuffer + 40))); 
@@ -424,6 +425,7 @@ bool RealTimeClock::sendTimeRequest()
     udp.beginPacket(timeServerIP, port); //NTP requests are to port 123
     udp.write(packetBuffer, NTP_PACKET_SIZE);
     udp.endPacket();
+    internalLedNetActivity();
     return true;
   }
   return false;

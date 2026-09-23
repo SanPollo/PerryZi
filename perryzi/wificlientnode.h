@@ -20,12 +20,35 @@
 #define PACKET_BUF_SIZE 256
 
 #if INCLUDE_SSH
-# include "wifisshclient.h"
+#include "wifisshclient.h"
+#endif
+
+#if INTERNAL_LED == network_traffic
+/* Every socket handed out by createWiFiClient() is one of these, so the
+   HTTP, Gopher and FTP protocol modules are covered without touching
+   them: read() and write() are virtual, and Print::printf() funnels
+   through write(buf,size), so control lines count as traffic too. */
+class LedWiFiClient : public WiFiClient
+{
+  public:
+    virtual int read() override
+    { internalLedNetActivity(); return WiFiClient::read(); }
+    virtual int read(uint8_t *buf, size_t size) override
+    { internalLedNetActivity(); return WiFiClient::read(buf,size); }
+    virtual size_t write(uint8_t c) override
+    { internalLedNetActivity(); return WiFiClient::write(c); }
+    virtual size_t write(const uint8_t *buf, size_t size) override
+    { internalLedNetActivity(); return WiFiClient::write(buf,size); }
+};
 #endif
 
 static WiFiClient *createWiFiClient(bool SSL)
 {
+#if INTERNAL_LED == network_traffic
+  return new LedWiFiClient();
+#else
   return new WiFiClient();
+#endif
 }
 
 typedef struct Packet

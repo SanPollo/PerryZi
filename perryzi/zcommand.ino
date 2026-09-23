@@ -21,7 +21,7 @@ extern "C" void esp_schedule();
 extern "C" void esp_yield();
 
 #if INCLUDE_PING
-#  include "proto_ping.h"
+#include "proto_ping.h"
 #endif
 
 ZCommand::ZCommand()
@@ -149,11 +149,11 @@ void ZCommand::setConfigDefaults()
   serialDelayMs=0;
   dcdActive=DEFAULT_DCD_ACTIVE;
   dcdInactive=DEFAULT_DCD_INACTIVE;
-# ifdef HARD_DCD_HIGH
+#ifdef HARD_DCD_HIGH
   dcdInactive=DEFAULT_DCD_ACTIVE;
-# elif defined(HARD_DCD_LOW)
+#elif defined(HARD_DCD_LOW)
   dcdActive=DEFAULT_DCD_INACTIVE;
-# endif 
+#endif 
   ctsActive=DEFAULT_CTS_ACTIVE;
   ctsInactive=DEFAULT_CTS_INACTIVE;
   rtsActive=DEFAULT_RTS_ACTIVE;
@@ -596,6 +596,11 @@ void ZCommand::loadConfig()
     baudRate=atoi(argv[CFG_BAUDRATE].c_str());
   if(baudRate <= 0)
     baudRate=DEFAULT_BAUD_RATE;
+  // A stored config can outlive the firmware that wrote it: a saved rate
+  // above this host's ceiling would otherwise come straight back up at
+  // a speed the hardware cannot carry, with no AT command involved.
+  if((MAX_BAUD_RATE != 0) && (baudRate > MAX_BAUD_RATE))
+    baudRate=DEFAULT_BAUD_RATE;
   if(argv[CFG_UART].length()>0)
     serialConfig = (SerialConfig)atoi(argv[CFG_UART].c_str());
   if(serialConfig <= 0)
@@ -943,9 +948,10 @@ ZResult ZCommand::doBaudCommand(int vval, uint8_t *vbuf, int vlen)
   }
   else
     baudChk=vval;
-  // PerryFi 1.0 (WeMos D1 mini): the CPS8256 8253/DART cannot exceed 9600 baud,
-  // so refuse any ATB request above that. No effect on PerryFi 2.1 (LIMIT9600==false).
-  if(LIMIT9600 && (baudChk > 9600))
+  // Enforce the host's baud ceiling, if it has one.  MAX_BAUD_RATE of 0
+  // means no ceiling.  Reached by ATB<n> and by AT$sb=<n>, which routes
+  // through here too.
+  if((MAX_BAUD_RATE != 0) && (baudChk > MAX_BAUD_RATE))
     return ZERROR;
   hwSerialFlush();
   if(baudChk != baudRate)
@@ -1551,7 +1557,8 @@ ZResult ZCommand::doTransmitCommand(int vval, uint8_t *vbuf, int vlen, bool isNu
     return ZOK;
   else
   {
-    HWSerial.printf("%d%s",rcvdCrc8,EOLN.c_str());
+    internalLedSerialActivity();
+  HWSerial.printf("%d%s",rcvdCrc8,EOLN.c_str());
     return ZIGNORE_SPECIAL;
   }
 }
@@ -1992,6 +1999,11 @@ ZResult ZCommand::setStatusRegister(const int snum, const int sval, int *crc8, c
    *crc8=sval;
    break;
  case 43:
+   // The temporary baud rate is applied by checkBaudChange() without
+   // going through doBaudCommand(), so the ceiling is enforced here as
+   // well -- otherwise ATS43 would be a way around it.
+   if((MAX_BAUD_RATE != 0) && (sval > MAX_BAUD_RATE))
+     return ZERROR;
    if(sval > 0)
      tempBaud = sval;
    else
@@ -2687,6 +2699,14 @@ ZResult ZCommand::doSerialCommand()
         }
         break;
       case '+':
+#ifdef ESPRESSIF_CMDS
+        // Tried first, and on the untouched buffer: the loop below
+        // lower-cases vbuf in place, which would destroy the case of
+        // quoted arguments.  Falls through to the existing handling
+        // whenever the command is not one of ours.
+        if(espAtCommand(vbuf,vlen,&result))
+          break;
+#endif
         for(int i=0;vbuf[i]!=0;i++)
           vbuf[i]=lc(vbuf[i]);
         if(strcmp((const char *)vbuf,"config")==0)
@@ -2694,14 +2714,14 @@ ZResult ZCommand::doSerialCommand()
             configMode.switchTo();
             result = ZOK;
         }
-#  if INCLUDE_IRCC
+#if INCLUDE_IRCC
         else
         if((strstr((const char *)vbuf,"irc")==(char *)vbuf))
         {
             result = ZOK;
             ircMode.switchTo();
         }
-#  endif
+#endif
 #if INCLUDE_SLIP
         else
         if((strstr((const char *)vbuf,"slip")==(char *)vbuf))
@@ -2709,7 +2729,7 @@ ZResult ZCommand::doSerialCommand()
             result = ZOK;
             slipMode.switchTo();
         }
-#  endif
+#endif
 #if INCLUDE_PPP
         else
         if((strstr((const char *)vbuf,"ppp")==(char *)vbuf))
@@ -2717,8 +2737,8 @@ ZResult ZCommand::doSerialCommand()
             result = ZOK;
             pppMode.switchTo();
         }
-#  endif
-#  if INCLUDE_PING
+#endif
+#if INCLUDE_PING
         else
         if((strstr((const char *)vbuf,"ping")==(char *)vbuf))
         {
@@ -2737,7 +2757,7 @@ ZResult ZCommand::doSerialCommand()
           else
             result = (ping(host) >= 0 )? ZOK : ZERROR;
         }
-#  endif
+#endif
         else
         if((strstr((const char *)vbuf,"print")==(char *)vbuf)||(strstr((const char *)vbuf,"PRINT")==(char *)vbuf))
             result = printMode.switchTo((char *)vbuf+5,vlen-5);
@@ -3820,6 +3840,13 @@ bool ZCommand::acceptNewConnection()
 
 void ZCommand::serialIncoming()
 {
+#ifdef ESPRESSIF_CMDS
+  // An AT+CIPSEND payload is raw bytes: it must not reach
+  // readSerialStream(), which drops NULs, acts on CR/LF and interprets
+  // XON/XOFF.  espAtRawCapture() owns the input while a send is open.
+  if(espAtRawCapture())
+    return;
+#endif
   bool crReceived=readSerialStream();
   if((!crReceived)||(eon==0))
     return;
@@ -3831,6 +3858,14 @@ void ZCommand::serialIncoming()
 void ZCommand::loop()
 {
   checkPlusPlusPlusDisconnect();
+#ifdef ESPRESSIF_CMDS
+  // The Espressif layer writes through its own ZSerial instance, which
+  // would otherwise keep DEFAULT_FCT regardless of ATF or the stored
+  // configuration.  Synced here, in the one place where both are in
+  // scope, rather than at every setFlowControlType() call site.
+  espSerial.setFlowControlType(serial.getFlowControlType());
+  espAtLoop();
+#endif
   if(acceptNewConnection())
   {
       checkBaudChange();

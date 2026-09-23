@@ -22,6 +22,7 @@
 static void serialDirectWrite(uint8_t c)
 {
   HWSerial.write(c);
+  internalLedSerialActivity();
   if(serialDelayMs > 0)
     delay(serialDelayMs);
   logSerialOut(c);

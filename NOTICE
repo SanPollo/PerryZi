@@ -1,0 +1,18 @@
+PerryZi - ESP8266 Firmware for the PerryFi
+Copyright 2026 Nick J. Date
+
+This product is derived from the Zimodem / C64Net WiFi Firmware,
+and includes software developed by:
+
+   Bo Zimmerman
+   http://www.zimmers.net
+   https://github.com/bozimmerman/Zimodem
+
+The upstream NOTICE also records that Zimodem contains portions of
+libssh2, licensed under the BSD-3 license:
+
+   https://github.com/libssh2/libssh2
+
+PerryZi does not include the SSH client, so no libssh2 code is
+present in this distribution. The attribution is retained for
+completeness.
