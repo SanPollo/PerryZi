@@ -95,7 +95,7 @@ void ConnSettings::IPtoStr(IPAddress *ip, String &str)
     return;
   }
   char temp[20];
-  sprintf(temp,"%d.%d.%d.%d",(*ip)[0],(*ip)[1],(*ip)[2],(*ip)[3]);
+  sprintf_P(temp,PSTR("%d.%d.%d.%d"),(*ip)[0],(*ip)[1],(*ip)[2],(*ip)[3]);
   str = temp;
 }
 

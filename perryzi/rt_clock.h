@@ -19,7 +19,10 @@
 
 #include <WiFiUdp.h>
 
-static const char *TimeZones[243][2] PROGMEM = { {"UTC","0"},
+// Name and UTC offset of each zone. The text itself is held in flash (an
+// array of pointers would leave the strings in RAM), so it must only be read
+// with pgm_read_byte(). 11 bytes fits the longest entry, "9:30/10:30".
+static const char TimeZones[243][2][11] PROGMEM = { {"UTC","0"},
     {"A","1"},{"CDT","10:30"},{"ACST","9:30"},{"ACT","-5"},
     {"ACT","9:30/10:30"},{"ACWST","8:45"},{"ADT","3"},{"ADT","-3"},
     {"AEDT","11"},{"AEST","10"},{"AET","11"},{"AFT","4:30"},

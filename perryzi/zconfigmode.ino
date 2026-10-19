@@ -144,7 +144,7 @@ void ZConfig::doModeCommand()
         PhoneBookEntry *pb=PhoneBookEntry::findPhonebookEntry(cmd);
         if(pb == null)
         {
-          serial.printf("%s%sPhone number not found: '%s'.%s%s",EOLNC,EOLNC,cmd.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%s%sPhone number not found: '%s'.%s%s"),EOLNC,EOLNC,cmd.c_str(),EOLNC,EOLNC);
           currState=ZCFGMENU_MAIN;
           showMenu=true;
         }
@@ -214,9 +214,9 @@ void ZConfig::doModeCommand()
           }
         }
         if(!commandMode.reSaveConfig(3))
-          serial.printf("%sFailed to save Settings.%s",EOLNC,EOLNC);
+          serial.printf(F("%sFailed to save Settings.%s"),EOLNC,EOLNC);
         else
-          serial.printf("%sSettings saved.%s",EOLNC,EOLNC);
+          serial.printf(F("%sSettings saved.%s"),EOLNC,EOLNC);
         commandMode.showInitMessage();
         WiFiServerNode::SaveWiFiServers();
         switchBackToCommandMode();
@@ -231,7 +231,7 @@ void ZConfig::doModeCommand()
       PhoneBookEntry *pb=PhoneBookEntry::findPhonebookEntry(cmd);
       if(pb != null)
       {
-        serial.printf("%s%sNumber already exists '%s'.%s%s",EOLNC,EOLNC,cmd.c_str(),EOLNC,EOLNC);
+        serial.printf(F("%s%sNumber already exists '%s'.%s%s"),EOLNC,EOLNC,cmd.c_str(),EOLNC,EOLNC);
         currState=ZCFGMENU_MAIN;
         showMenu=true;
       }
@@ -273,7 +273,7 @@ void ZConfig::doModeCommand()
       {
         delete entry;
         currState=ZCFGMENU_MAIN;
-        serial.printf("%sPhonebook entry deleted.%s%s",EOLNC,EOLNC,EOLNC);
+        serial.printf(F("%sPhonebook entry deleted.%s%s"),EOLNC,EOLNC,EOLNC);
       }
       else
       if((cmd.length()==0) && (entry != null))
@@ -281,7 +281,7 @@ void ZConfig::doModeCommand()
       else
       {
         if(!validateHostInfo((uint8_t *)cmd.c_str()))
-          serial.printf("%sInvalid address format (hostname:port) or (user:pass@hostname:port) for '%s'.%s%s",EOLNC,cmd.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%sInvalid address format (hostname:port) or (user:pass@hostname:port) for '%s'.%s%s"),EOLNC,cmd.c_str(),EOLNC,EOLNC);
         else
         {
           lastAddress = cmd;
@@ -354,7 +354,7 @@ void ZConfig::doModeCommand()
           break;
          
         default:
-          serial.printf("%sInvalid option '%s'.%s%s",EOLNC,cmd.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%sInvalid option '%s'.%s%s"),EOLNC,cmd.c_str(),EOLNC,EOLNC);
           break;
         }
         settingsChanged=true;
@@ -371,7 +371,7 @@ void ZConfig::doModeCommand()
       {
         IPAddress *newaddr = ConnSettings::parseIP(cmd.c_str());
         if(newaddr==null)
-          serial.printf("%sBad address (%s).%s",EOLNC,cmd.c_str(),EOLNC);
+          serial.printf(F("%sBad address (%s).%s"),EOLNC,cmd.c_str(),EOLNC);
         else
         {
           currState=ZCFGMENU_NETMENU;
@@ -382,7 +382,7 @@ void ZConfig::doModeCommand()
           case 'g': lastGW = *newaddr; break;
           case 's': lastSN = *newaddr; break;
           }
-          free(newaddr);
+          delete newaddr;
         }
       }
       showMenu=true;
@@ -400,7 +400,7 @@ void ZConfig::doModeCommand()
         {
           setNewStaticIPs(null,null,null,null);
           if(!connectWifi(wifiSSI.c_str(),wifiPW.c_str(),staticIP,staticDNS,staticGW,staticSN))
-            serial.printf("%sUnable to connect to %s. :(%s",EOLNC,wifiSSI.c_str(),EOLNC);
+            serial.printf(F("%sUnable to connect to %s. :(%s"),EOLNC,wifiSSI.c_str(),EOLNC);
           settingsChanged=true;
         }
         else
@@ -420,7 +420,7 @@ void ZConfig::doModeCommand()
           *sn = lastSN;
           setNewStaticIPs(ip,dns,gw,sn);
           if(!connectWifi(wifiSSI.c_str(),wifiPW.c_str(),staticIP,staticDNS,staticGW,staticSN))
-            serial.printf("%sUnable to connect to %s. :(%s",EOLNC,wifiSSI.c_str(),EOLNC);
+            serial.printf(F("%sUnable to connect to %s. :(%s"),EOLNC,wifiSSI.c_str(),EOLNC);
           settingsChanged=true;
         }
       }
@@ -445,7 +445,7 @@ void ZConfig::doModeCommand()
           currState=ZCFGMENU_SUBNET;
           break;
         default:
-          serial.printf("%sInvalid option '%s'.%s%s",EOLNC,cmd.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%sInvalid option '%s'.%s%s"),EOLNC,cmd.c_str(),EOLNC,EOLNC);
           break;
         }
       }
@@ -467,11 +467,11 @@ void ZConfig::doModeCommand()
         PhoneBookEntry *entry = PhoneBookEntry::findPhonebookEntry(lastNumber);
         if(entry != null)
         {
-          serial.printf("%sPhonebook entry updated.%s%s",EOLNC,EOLNC,EOLNC);
+          serial.printf(F("%sPhonebook entry updated.%s%s"),EOLNC,EOLNC,EOLNC);
           delete entry;
         }
         else
-          serial.printf("%sPhonebook entry added.%s%s",EOLNC,EOLNC,EOLNC);
+          serial.printf(F("%sPhonebook entry added.%s%s"),EOLNC,EOLNC,EOLNC);
         entry = new PhoneBookEntry(lastNumber,lastAddress.c_str(),lastOptions.c_str(),lastNotes.c_str());
         PhoneBookEntry::savePhonebook();
         currState=ZCFGMENU_MAIN;
@@ -503,7 +503,7 @@ void ZConfig::doModeCommand()
             flags.secure=!flags.secure;
             break;
           default:
-            serial.printf("%sInvalid toggle option '%s'.%s%s",EOLNC,cmd.c_str(),EOLNC,EOLNC);
+            serial.printf(F("%sInvalid toggle option '%s'.%s%s"),EOLNC,cmd.c_str(),EOLNC,EOLNC);
             break;
         }
         lastOptions = flags.getFlagString();
@@ -522,20 +522,20 @@ void ZConfig::doModeCommand()
       {
         int num=atoi(cmd.c_str());
         if((num<=0)||(num>lastNumNetworks))
-            serial.printf("%sInvalid number.  Try again.%s",EOLNC,EOLNC);
+            serial.printf(F("%sInvalid number.  Try again.%s"),EOLNC,EOLNC);
         else
         if(WiFi.encryptionType(num-1) == ENC_TYPE_NONE)
         {
           if(!connectWifi(WiFi.SSID(num-1).c_str(),"",null,null,null,null))
           {
-            serial.printf("%sUnable to connect to %s. :(%s",EOLNC,WiFi.SSID(num-1).c_str(),EOLNC);
+            serial.printf(F("%sUnable to connect to %s. :(%s"),EOLNC,WiFi.SSID(num-1).c_str(),EOLNC);
           }
           else
           {
             wifiSSI=WiFi.SSID(num-1);
             wifiPW="";
             settingsChanged=true;
-            serial.printf("%sConnected!%s",EOLNC,EOLNC);
+            serial.printf(F("%sConnected!%s"),EOLNC,EOLNC);
             currState=ZCFGMENU_NETMENU;
           }
           showMenu=true;
@@ -551,7 +551,11 @@ void ZConfig::doModeCommand()
     }
     case ZCFGMENU_NEWHOST:
       if(cmd.length()==0)
+      {
+        // Show the menu being moved to; it was entered without being shown.
         currState=ZCFGMENU_WIMENU;
+        showMenu=true;
+      }
       else
       {
         hostname=cmd;
@@ -559,7 +563,7 @@ void ZConfig::doModeCommand()
         if((wifiSSI.length() > 0) && (WiFi.status()==WL_CONNECTED))
         {
             if(!connectWifi(wifiSSI.c_str(),wifiPW.c_str(),staticIP,staticDNS,staticGW,staticSN))
-              serial.printf("%sUnable to connect to %s. :(%s",EOLNC,wifiSSI.c_str(),EOLNC);
+              serial.printf(F("%sUnable to connect to %s. :(%s"),EOLNC,wifiSSI.c_str(),EOLNC);
             settingsChanged=true;
         }
         currState=ZCFGMENU_MAIN;
@@ -571,9 +575,9 @@ void ZConfig::doModeCommand()
       {
         if(!printMode.testPrinterSpec(cmd.c_str(),cmd.length()))
         {
-          serial.printf("%sBad format. Try ?:<host>:<port>/<path>.%s",EOLNC,EOLNC);
-          serial.printf("? = A)scii or R)aw.%s",EOLNC);
-          serial.printf("Example: R:192.168.1.71:631/ipp/printer%s",EOLNC);
+          serial.printf(F("%sBad format. Try ?:<host>:<port>/<path>.%s"),EOLNC,EOLNC);
+          serial.printf(F("? = A)scii or R)aw.%s"),EOLNC);
+          serial.printf(F("Example: R:192.168.1.71:631/ipp/printer%s"),EOLNC);
         }
         else
         {
@@ -599,7 +603,7 @@ void ZConfig::doModeCommand()
             delay(1);
           }
           if(!connectWifi(WiFi.SSID(lastNumber).c_str(),cmd.c_str(),null,null,null,null))
-            serial.printf("%sUnable to connect to %s.%s",EOLNC,WiFi.SSID(lastNumber).c_str(),EOLNC);
+            serial.printf(F("%sUnable to connect to %s.%s"),EOLNC,WiFi.SSID(lastNumber).c_str(),EOLNC);
           else
           {
             //setNewStaticIPs(null,null,null,null);
@@ -636,7 +640,7 @@ void ZConfig::doModeCommand()
           commandMode.serial.setFlowControlType(FCT_DISABLED);
         else
         {
-          serial.printf("%sUnknown flow control type '%s'.  Try again.%s",EOLNC,cmd.c_str(),EOLNC);
+          serial.printf(F("%sUnknown flow control type '%s'.  Try again.%s"),EOLNC,cmd.c_str(),EOLNC);
           currState=ZCFGMENU_FLOW;
         }
         settingsChanged = settingsChanged || (currState ==ZCFGMENU_MAIN);
@@ -656,9 +660,9 @@ void ZConfig::loop()
     {
       case ZCFGMENU_MAIN:
       {
-        serial.printf("%sMain Menu%s",EOLNC,EOLNC);
-        serial.printf("[HOST] name: %s%s",hostname.c_str(),EOLNC);
-        serial.printf("[WIFI] connection: %s%s",(WiFi.status() == WL_CONNECTED)?wifiSSI.c_str():"Not connected",EOLNC);
+        serial.printf(F("%sMain Menu%s"),EOLNC,EOLNC);
+        serial.printf(F("[HOST] name: %s%s"),hostname.c_str(),EOLNC);
+        serial.printf(F("[WIFI] connection: %s%s"),(WiFi.status() == WL_CONNECTED)?wifiSSI.c_str():"Not connected",EOLNC);
         String flowName;
         switch(commandMode.serial.getFlowControlType())
         {
@@ -681,73 +685,73 @@ void ZConfig::loop()
           bbsMode = "Port ";
           bbsMode += serverSpec.port;
         }
-        serial.printf("[FLOW] control: %s%s",flowName.c_str(),EOLNC);
-        serial.printf("[ECHO] keystrokes: %s%s",savedEcho?"ON":"OFF",EOLNC);
-        serial.printf("[BBS] host: %s%s",bbsMode.c_str(),EOLNC);
-        serial.printf("[PRINT] spec: %s%s",printMode.getLastPrinterSpec(),EOLNC);
-        serial.printf("[ADD] new phonebook entry%s",EOLNC);
+        serial.printf(F("[FLOW] control: %s%s"),flowName.c_str(),EOLNC);
+        serial.printf(F("[ECHO] keystrokes: %s%s"),savedEcho?"ON":"OFF",EOLNC);
+        serial.printf(F("[BBS] host: %s%s"),bbsMode.c_str(),EOLNC);
+        serial.printf(F("[PRINT] spec: %s%s"),printMode.getLastPrinterSpec(),EOLNC);
+        serial.printf(F("[ADD] new phonebook entry%s"),EOLNC);
         PhoneBookEntry *p = phonebook;
         if(p != null)
         {
-          serial.printf("Phonebook entries:%s",EOLNC);
+          serial.printf(F("Phonebook entries:%s"),EOLNC);
           while(p != null)
           {
             if(strlen(p->notes)>0)
-              serial.printf("  [%lu] %s (%s)%s",p->number, p->address, p->notes, EOLNC);
+              serial.printf(F("  [%lu] %s (%s)%s"),p->number, p->address, p->notes, EOLNC);
             else
-              serial.printf("  [%lu] %s%s",p->number, p->address, EOLNC);
+              serial.printf(F("  [%lu] %s%s"),p->number, p->address, EOLNC);
             p=p->next;
           }
         }
-        serial.printf("%sEnter command or entry or ENTER to exit: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter command or entry or ENTER to exit: "),EOLNC,EOLNC);
         break;
       }
       case ZCFGMENU_NUM:
-        serial.printf("%sEnter a new fake phone number (digits ONLY)%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter a new fake phone number (digits ONLY)%s: "),EOLNC,EOLNC);
         break;
       case ZCFGMENU_NEWPORT:
-        serial.printf("%sEnter a port number to listen on%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter a port number to listen on%s: "),EOLNC,EOLNC);
         break;
       case ZCFGMENU_ADDRESS:
       {
         PhoneBookEntry *lastEntry = PhoneBookEntry::findPhonebookEntry(lastNumber);
         if(lastEntry == null)
-          serial.printf("%sEnter hostname:port, or user:pass@hostname:port for SSH%s: ",EOLNC,EOLNC);
+          serial.printf(F("%sEnter hostname:port, or user:pass@hostname:port for SSH%s: "),EOLNC,EOLNC);
         else
-          serial.printf("%sModify address, or enter DELETE (%s)%s: ",EOLNC,lastAddress.c_str(),EOLNC);
+          serial.printf(F("%sModify address, or enter DELETE (%s)%s: "),EOLNC,lastAddress.c_str(),EOLNC);
         break;
       }
       case ZCFGMENU_OPTIONS:
       {
         ConnSettings flags(lastOptions.c_str());
-        serial.printf("%sConnection Options:%s",EOLNC,EOLNC);
-        serial.printf("[TELNET] Translation: %s%s",flags.telnet?"ON":"OFF",EOLNC);
-        serial.printf("[ECHO]: %s%s",flags.echo?"ON":"OFF",EOLNC);
-        serial.printf("[FLOW] Control: %s%s",flags.xonxoff?"XON/XOFF":flags.rtscts?"RTS/CTS":"DISABLED",EOLNC);
-        serial.printf("[SSH/SSL] Security: %s%s",flags.secure?"ON":"OFF",EOLNC);
-        serial.printf("%sEnter option to toggle or ENTER to exit%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sConnection Options:%s"),EOLNC,EOLNC);
+        serial.printf(F("[TELNET] Translation: %s%s"),flags.telnet?"ON":"OFF",EOLNC);
+        serial.printf(F("[ECHO]: %s%s"),flags.echo?"ON":"OFF",EOLNC);
+        serial.printf(F("[FLOW] Control: %s%s"),flags.xonxoff?"XON/XOFF":flags.rtscts?"RTS/CTS":"DISABLED",EOLNC);
+        serial.printf(F("[SSH/SSL] Security: %s%s"),flags.secure?"ON":"OFF",EOLNC);
+        serial.printf(F("%sEnter option to toggle or ENTER to exit%s: "),EOLNC,EOLNC);
         break;
       }
       case ZCFGMENU_NOTES:
       {
-        serial.printf("%sEnter some notes for this entry (%s)%s: ",EOLNC,lastNotes.c_str(),EOLNC);
+        serial.printf(F("%sEnter some notes for this entry (%s)%s: "),EOLNC,lastNotes.c_str(),EOLNC);
         break;
       }
       case ZCFGMENU_BBSMENU:
       {
-        serial.printf("%sBBS host settings:%s",EOLNC,EOLNC);
+        serial.printf(F("%sBBS host settings:%s"),EOLNC,EOLNC);
         if(newListen)
         {
           ConnSettings flags(serverSpec.flagsBitmap);
-          serial.printf("%s[HOST] Listener Port: %d%s",EOLNC,serverSpec.port,EOLNC);
-          serial.printf("[TELNET] Translation: %s%s",flags.telnet?"ON":"OFF",EOLNC);
-          serial.printf("[ECHO]: %s%s",flags.echo?"ON":"OFF",EOLNC);
-          serial.printf("[FLOW] Control: %s%s",flags.xonxoff?"XON/XOFF":flags.rtscts?"RTS/CTS":"DISABLED",EOLNC);
-          serial.printf("[DISABLE] BBS host listener%s",EOLNC);
+          serial.printf(F("%s[HOST] Listener Port: %d%s"),EOLNC,serverSpec.port,EOLNC);
+          serial.printf(F("[TELNET] Translation: %s%s"),flags.telnet?"ON":"OFF",EOLNC);
+          serial.printf(F("[ECHO]: %s%s"),flags.echo?"ON":"OFF",EOLNC);
+          serial.printf(F("[FLOW] Control: %s%s"),flags.xonxoff?"XON/XOFF":flags.rtscts?"RTS/CTS":"DISABLED",EOLNC);
+          serial.printf(F("[DISABLE] BBS host listener%s"),EOLNC);
         }
         else
-          serial.printf("%s[ENABLE] BBS host listener%s",EOLNC,EOLNC);
-        serial.printf("%sEnter option to toggle or ENTER to exit%s: ",EOLNC,EOLNC);
+          serial.printf(F("%s[ENABLE] BBS host listener%s"),EOLNC,EOLNC);
+        serial.printf(F("%sEnter option to toggle or ENTER to exit%s: "),EOLNC,EOLNC);
         break;
       }
       case ZCFGMENU_SUBNET:
@@ -758,25 +762,25 @@ void ZConfig::loop()
         case 'i':
         {
           ConnSettings::IPtoStr(&lastIP,str);
-          serial.printf("%sIP Address (%s)%s: %s",EOLNC,str.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%sIP Address (%s)%s: %s"),EOLNC,str.c_str(),EOLNC,EOLNC);
           break;
         }
         case 'g':
         {
           ConnSettings::IPtoStr(&lastGW,str);
-          serial.printf("%sGateway Address (%s)%s: %s",EOLNC,str.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%sGateway Address (%s)%s: %s"),EOLNC,str.c_str(),EOLNC,EOLNC);
           break;
         }
         case 's':
         {
           ConnSettings::IPtoStr(&lastSN,str);
-          serial.printf("%sSubnet Mask Address (%s)%s: %s",EOLNC,str.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%sSubnet Mask Address (%s)%s: %s"),EOLNC,str.c_str(),EOLNC,EOLNC);
           break;
         }
         case 'd':
         {
           ConnSettings::IPtoStr(&lastDNS,str);
-          serial.printf("%sDNS Address (%s)%s: %s",EOLNC,str.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%sDNS Address (%s)%s: %s"),EOLNC,str.c_str(),EOLNC,EOLNC);
           break;
         }
         }
@@ -784,23 +788,23 @@ void ZConfig::loop()
       }
       case ZCFGMENU_NETMENU:
       {
-        serial.printf("%sNetwork settings:%s",EOLNC,EOLNC);
+        serial.printf(F("%sNetwork settings:%s"),EOLNC,EOLNC);
         if(!useDHCP)
         {
           String str;
           ConnSettings::IPtoStr(&lastIP,str);
-          serial.printf("%s[IP]: %s%s",EOLNC,str.c_str(),EOLNC);
+          serial.printf(F("%s[IP]: %s%s"),EOLNC,str.c_str(),EOLNC);
           ConnSettings::IPtoStr(&lastSN,str);
-          serial.printf("[SUBNET]: %s%s",str.c_str(),EOLNC);
+          serial.printf(F("[SUBNET]: %s%s"),str.c_str(),EOLNC);
           ConnSettings::IPtoStr(&lastGW,str);
-          serial.printf("[GATEWAY]: %s%s",str.c_str(),EOLNC);
+          serial.printf(F("[GATEWAY]: %s%s"),str.c_str(),EOLNC);
           ConnSettings::IPtoStr(&lastDNS,str);
-          serial.printf("[DNS]: %s%s",str.c_str(),EOLNC);
-          serial.printf("[ENABLE] Enable DHCP%s",EOLNC);
+          serial.printf(F("[DNS]: %s%s"),str.c_str(),EOLNC);
+          serial.printf(F("[ENABLE] Enable DHCP%s"),EOLNC);
         }
         else
-          serial.printf("%s[DISABLE] DHCP%s",EOLNC,EOLNC);
-        serial.printf("%sEnter option to toggle or ENTER to exit%s: ",EOLNC,EOLNC);
+          serial.printf(F("%s[DISABLE] DHCP%s"),EOLNC,EOLNC);
+        serial.printf(F("%sEnter option to toggle or ENTER to exit%s: "),EOLNC,EOLNC);
         break;
       }
       case ZCFGMENU_WIMENU:
@@ -808,46 +812,46 @@ void ZConfig::loop()
         int n = WiFi.scanNetworks();
         if(n>20)
           n=20;
-        serial.printf("%sWiFi Networks:%s",EOLNC,EOLNC);
+        serial.printf(F("%sWiFi Networks:%s"),EOLNC,EOLNC);
         lastNumNetworks=n;
         for (int i = 0; i < n; ++i)
         {
-          serial.printf("[%d] ",(i+1));
+          serial.printf(F("[%d] "),(i+1));
           serial.prints(WiFi.SSID(i).c_str());
-          serial.prints(" (");
+          serial.prints(F(" ("));
           serial.printi(WiFi.RSSI(i));
-          serial.prints(")");
+          serial.prints(F(")"));
           serial.prints((WiFi.encryptionType(i) == ENC_TYPE_NONE)?" ":"*");
           serial.prints(EOLN.c_str());
           serial.flush();
           delay(10);
         }
-        serial.printf("%sEnter number to connect, or ENTER: ",EOLNC);
+        serial.printf(F("%sEnter number to connect, or ENTER: "),EOLNC);
         break;
       }
       case ZCFGMENU_NEWHOST:
       {
-        serial.printf("%sEnter a new hostname: ",EOLNC);
+        serial.printf(F("%sEnter a new hostname: "),EOLNC);
         break;
       }
       case ZCFGMENU_NEWPRINT:
       {
-        serial.printf("%sEnter ipp printer spec (?:<host>:<port>/path)%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter ipp printer spec (?:<host>:<port>/path)%s: "),EOLNC,EOLNC);
         break;
       }
       case ZCFGMENU_WIFIPW:
       {
-        serial.printf("%sEnter your WiFi Password: ",EOLNC);
+        serial.printf(F("%sEnter your WiFi Password: "),EOLNC);
         break;
       }
       case ZCFGMENU_FLOW:
       {
-        serial.printf("%sEnter RTS/CTS, XON/XOFF, or DISABLE flow control%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter RTS/CTS, XON/XOFF, or DISABLE flow control%s: "),EOLNC,EOLNC);
         break;
       }
       case ZCFGMENU_WICONFIRM:
       {
-        serial.printf("%sYour settings changed. Save (y/N)?",EOLNC);
+        serial.printf(F("%sYour settings changed. Save (y/N)?"),EOLNC);
         break;
       }
     }

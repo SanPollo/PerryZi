@@ -20,7 +20,7 @@
 // ***************************************************************************
 // Global definitions - USER DEFINABLE OPTIONS START ON LINE 61!
 
-#define PERRYZI_VERSION "1.2.4"
+#define PERRYZI_VERSION "1.2.5"
 const char compile_date[] = __DATE__ " " __TIME__;
 #define DEFAULT_NO_DELAY true
 #define null 0
@@ -227,7 +227,7 @@ to #undef anything previously defined. */
 #define DEFAULT_OTH_ACTIVE  LOW
 #define DEFAULT_OTH_INACTIVE  HIGH
 
-#define MAX_PIN_NO 50
+#define MAX_PIN_NO 17 // the ESP8266 has GPIO0 to GPIO16
 #define INTERNAL_FLOW_CONTROL_DIV 380
 #define DEFAULT_RECONNECT_DELAY 60000
 #define MAX_RECONNECT_DELAY 1800000
@@ -277,11 +277,14 @@ class ZMode
 	#include "espressif.h"
 #endif
 
+#if INCLUDE_SLIP || INCLUDE_PPP
+	#include "serialnetif.h"
+#endif
 #if INCLUDE_SLIP
-	#include "zslipmode.h"
+	#include "slip.h"
 #endif
 #if INCLUDE_PPP
-	#include "zpppmode.h"
+	#include "ppp.h"
 #endif
 #if INCLUDE_IRCC
 	#include "zircmode.h"
@@ -303,10 +306,10 @@ static ZPrint printMode;
 static ZConfig configMode;
 static RealTimeClock zclock(0);
 #if INCLUDE_SLIP
-   static ZSLIPMode slipMode;
+   static SlipMode slipMode;
 #endif
 #if INCLUDE_PPP
-   static ZPPPMode pppMode;
+   static PppMode pppMode;
 #endif
 #if INCLUDE_IRCC
    static ZIRCMode ircMode;
@@ -415,9 +418,18 @@ static void doNothing(const char* format, ...)
 {
 }
 
+// True if pinNo is a GPIO this board lets PerryZi use. Every read of
+// pinSupport[] goes through here, so an unset pin (-1), or an out-of-range
+// number from an AT command or saved settings, never indexes outside the
+// table.
+static inline bool pinIsSupported(int pinNo)
+{
+  return (pinNo >= 0) && (pinNo < MAX_PIN_NO) && pinSupport[pinNo];
+}
+
 static void s_pinWrite(uint8_t pinNo, uint8_t value)
 {
-  if(pinSupport[pinNo])
+  if(pinIsSupported(pinNo))
   {
     pinCache[pinNo] = value;
     digitalWrite(pinNo, value);
@@ -432,16 +444,16 @@ static void setHostName(const char *hname)
 static void setNewStaticIPs(IPAddress *ip, IPAddress *dns, IPAddress *gateWay, IPAddress *subNet)
 {
   if(staticIP != null)
-    free(staticIP);
+    delete staticIP;
   staticIP = ip;
   if(staticDNS != null)
-    free(staticDNS);
+    delete staticDNS;
   staticDNS = dns;
   if(staticGW != null)
-    free(staticGW);
+    delete staticGW;
   staticGW = gateWay;
   if(staticSN != null)
-    free(staticSN);
+    delete staticSN;
   staticSN = subNet;
 }
 

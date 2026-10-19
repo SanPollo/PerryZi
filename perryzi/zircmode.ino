@@ -21,7 +21,7 @@
 void ZIRCMode::switchBackToCommandMode()
 {
   debugPrintf("\r\nMode:Command\r\n");
-  serial.println("Back in command mode.");
+  serial.println(F("Back in command mode."));
   if(current != null)
   {
     delete current;
@@ -63,7 +63,7 @@ void ZIRCMode::switchTo()
     {
       randomSeed(millis());
       char tempNick[50];
-      sprintf(tempNick,"ChangeMe#%ld",random(1,999));
+      sprintf_P(tempNick,PSTR("ChangeMe#%ld"),random(1,999));
       nick = tempNick;
     }
   }
@@ -106,13 +106,13 @@ void ZIRCMode::doIRCCommand()
         PhoneBookEntry *pb=PhoneBookEntry::findPhonebookEntry(cmd);
         if(pb == null)
         {
-          serial.printf("%s%sPhone number not found: '%s'.%s%s",EOLNC,EOLNC,cmd.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%s%sPhone number not found: '%s'.%s%s"),EOLNC,EOLNC,cmd.c_str(),EOLNC,EOLNC);
           currState=ZIRCMENU_MAIN;
           showMenu=true;
         }
         else
         {
-          serial.printf("%s%sConnecting to %s...%s%s",EOLNC,EOLNC,pb->address,EOLNC,EOLNC);
+          serial.printf(F("%s%sConnecting to %s...%s%s"),EOLNC,EOLNC,pb->address,EOLNC,EOLNC);
           String address = pb->address;
           char vbuf[address.length()+1];
           strcpy(vbuf,pb->address);
@@ -133,14 +133,14 @@ void ZIRCMode::doIRCCommand()
           if(!c->isConnected())
           {
             logPrintln("Connnect: FAIL");
-            serial.prints("Connection failed.\n\r"); //TODO: maybe get rid of?
+            serial.prints(F("Connection failed.\n\r")); //TODO: maybe get rid of?
             currState=ZIRCMENU_MAIN;
             showMenu=true;
           }
           else
           {
             logPrintfln("Connnect: SUCCESS: %d",c->id);
-            serial.prints("Connected.\n\r"); //TODO: maybe get rid of?
+            serial.prints(F("Connected.\n\r")); //TODO: maybe get rid of?
             current=c;
             buf = "";
             currState=ZIRCMENU_COMMAND;
@@ -161,7 +161,7 @@ void ZIRCMode::doIRCCommand()
       PhoneBookEntry *pb=PhoneBookEntry::findPhonebookEntry(cmd);
       if(pb != null)
       {
-        serial.printf("%s%sNumber already exists '%s'.%s%s",EOLNC,EOLNC,cmd.c_str(),EOLNC,EOLNC);
+        serial.printf(F("%s%sNumber already exists '%s'.%s%s"),EOLNC,EOLNC,cmd.c_str(),EOLNC,EOLNC);
         currState=ZIRCMENU_MAIN;
         showMenu=true;
       }
@@ -190,7 +190,7 @@ void ZIRCMode::doIRCCommand()
       {
         delete entry;
         currState=ZIRCMENU_MAIN;
-        serial.printf("%sPhonebook entry deleted.%s%s",EOLNC,EOLNC,EOLNC);
+        serial.printf(F("%sPhonebook entry deleted.%s%s"),EOLNC,EOLNC,EOLNC);
       }
       else
       if((cmd.length()==0) && (entry != null))
@@ -214,7 +214,7 @@ void ZIRCMode::doIRCCommand()
         }
         if(fail)
         {
-          serial.printf("%sInvalid address format (hostname:port) for '%s'.%s%s",EOLNC,cmd.c_str(),EOLNC,EOLNC);
+          serial.printf(F("%sInvalid address format (hostname:port) for '%s'.%s%s"),EOLNC,cmd.c_str(),EOLNC,EOLNC);
         }
         else
         {
@@ -239,7 +239,7 @@ void ZIRCMode::doIRCCommand()
       {
         nick=cmd;
         File f = SPIFFS.open(NICK_FILE, "w");
-        f.printf("%s",nick.c_str());
+        f.printf_P(PSTR("%s"),nick.c_str());
         f.close();
       }
       currState=ZIRCMENU_MAIN;
@@ -250,7 +250,7 @@ void ZIRCMode::doIRCCommand()
     {
       if(cmd.length()==0)
       {
-        serial.printf("%sPhonebook entry added.%s%s",EOLNC,EOLNC,EOLNC);
+        serial.printf(F("%sPhonebook entry added.%s%s"),EOLNC,EOLNC,EOLNC);
         PhoneBookEntry *entry = new PhoneBookEntry(lastNumber,lastAddress.c_str(),lastOptions.c_str(),lastNotes.c_str());
         PhoneBookEntry::savePhonebook();
         currState=ZIRCMENU_MAIN;
@@ -282,7 +282,7 @@ void ZIRCMode::doIRCCommand()
             flags.secure=!flags.secure;
             break;
           default:
-            serial.printf("%sInvalid toggle option '%s'.%s%s",EOLNC,cmd.c_str(),EOLNC,EOLNC);
+            serial.printf(F("%sInvalid toggle option '%s'.%s%s"),EOLNC,cmd.c_str(),EOLNC,EOLNC);
             break;
         }
         lastOptions = flags.getFlagString();
@@ -316,11 +316,11 @@ void ZIRCMode::doIRCCommand()
           {
             channelName = cmd.substring(firstArgStart);
             if(current != null)
-              current->print("JOIN :"+channelName+"\r\n");
-            serial.println("* Now talking in: " + channelName);
+              current->print(String(F("JOIN :"))+channelName+"\r\n");
+            serial.println(String(F("* Now talking in: ")) + channelName);
           }
           else
-            serial.println("* A channel name is required *");
+            serial.println(F("* A channel name is required *"));
         }
         else
         if(lccmd.startsWith("/list"))
@@ -330,10 +330,10 @@ void ZIRCMode::doIRCCommand()
             listFilter = cmd.substring(firstArgStart);
             listFilter.toLowerCase();
             if(current != null)
-              current->print("LIST\r\n");
+              current->print(F("LIST\r\n"));
           }
           else
-            serial.println("* A channel name filter is required.  Trust me. *");
+            serial.println(F("* A channel name filter is required.  Trust me. *"));
         }
         else
         if (lccmd.startsWith("/part "))
@@ -351,15 +351,15 @@ void ZIRCMode::doIRCCommand()
           if(firstArgStart < cmd.length())
           {
             if(current != null)
-              current->print("PART " + channelToLeave + " :" + reasonToLeave + "\r\n");
+              current->print(String(F("PART ")) + channelToLeave + " :" + reasonToLeave + "\r\n");
             if(channelToLeave == channelName)
             {
-                serial.println("* You will need to /switch or /join a new channel to talk *");
+                serial.println(F("* You will need to /switch or /join a new channel to talk *"));
                 channelName = "";
             }
           }
           else
-            serial.println("* You must specify the channel to part/leave *");
+            serial.println(F("* You must specify the channel to part/leave *"));
         }
         else
         if (lccmd.startsWith("/whois ")) // WHOIS - get user info
@@ -367,10 +367,10 @@ void ZIRCMode::doIRCCommand()
           if((current != null)
           &&(nextArgStart < cmd.length()))
           {
-            current->print("WHOIS " + cmd.substring(firstArgStart) + "\r\n");
+            current->print(String(F("WHOIS ")) + cmd.substring(firstArgStart) + "\r\n");
           }
           else
-            serial.println("* You must specify who to whois *");
+            serial.println(F("* You must specify who to whois *"));
         }
         else
         if (lccmd.startsWith("/switch ")) // Switch to a new Channel to talk on
@@ -379,10 +379,10 @@ void ZIRCMode::doIRCCommand()
           {
             if(current != null)
               channelName = cmd.substring(firstArgStart);
-            serial.println("* Now talking in: " + channelName);
+            serial.println(String(F("* Now talking in: ")) + channelName);
           }
           else
-            serial.println("* A channel name is required *");
+            serial.println(F("* A channel name is required *"));
         }
         else
         if (lccmd.startsWith("/debug")) // Toggle debug mode to receive all RAW messages
@@ -391,13 +391,13 @@ void ZIRCMode::doIRCCommand()
           {
             debugRaw = false;
             if(current != null)
-              serial.println("* Debug OFF - no longer receive RAW IRC messages");
+              serial.println(F("* Debug OFF - no longer receive RAW IRC messages"));
           }
           else
           {
             debugRaw = true;
             if(current != null)
-              serial.println("* Debug ON - receiving RAW IRC messages");
+              serial.println(F("* Debug ON - receiving RAW IRC messages"));
           }
         }
         else
@@ -409,18 +409,18 @@ void ZIRCMode::doIRCCommand()
               String sendToNick = cmd.substring(firstArgStart,firstArgEnd);
               String msgToSend = cmd.substring(nextArgStart);
               if(current != null)
-                current->print("PRIVMSG " + sendToNick + " :" + msgToSend + "\r\n");
+                current->print(String(F("PRIVMSG ")) + sendToNick + " :" + msgToSend + "\r\n");
                 //current->printf("PRIVMSG %s :%s\r\n",sendToNick.c_str(),msgToSend.c_str());
           }
           else
-            serial.println("* A nickname and message is required*");
+            serial.println(F("* A nickname and message is required*"));
         }
         else
         if(lccmd.startsWith("/quit"))
         {
           if(current != null)
           {
-            current->print("QUIT Good bye!\r\n");
+            current->print(F("QUIT Good bye!\r\n"));
             current->flush();
             delay(1000);
             current->markForDisconnect();
@@ -431,8 +431,8 @@ void ZIRCMode::doIRCCommand()
         }
         else
         {
-          serial.println("* Unknown command: "+lccmd);
-          serial.println("* Try /?");
+          serial.println(String(F("* Unknown command: "))+lccmd);
+          serial.println(F("* Try /?"));
         }
       }
       else
@@ -440,9 +440,9 @@ void ZIRCMode::doIRCCommand()
       &&(joinReceived))
       {
         if(channelName.length() == 0)
-          serial.println("* You must /switch or /join a channel to talk. *");
+          serial.println(F("* You must /switch or /join a channel to talk. *"));
         else
-          current->printf("PRIVMSG %s :%s\r\n",channelName.c_str(),cmd.c_str());
+          current->printf_P(PSTR("PRIVMSG %s :%s\r\n"),channelName.c_str(),cmd.c_str());
       }
       break;
     }
@@ -460,51 +460,51 @@ void ZIRCMode::loopMenuMode()
       {
         if(nick.length()==0)
           nick = hostname;
-        serial.printf("%sInternet Relay Chat (IRC) Main Menu%s",EOLNC,EOLNC);
-        serial.printf("[NICK] name: %s%s",nick.c_str(),EOLNC);
-        serial.printf("[ADD] new phonebook entry%s",EOLNC);
+        serial.printf(F("%sInternet Relay Chat (IRC) Main Menu%s"),EOLNC,EOLNC);
+        serial.printf(F("[NICK] name: %s%s"),nick.c_str(),EOLNC);
+        serial.printf(F("[ADD] new phonebook entry%s"),EOLNC);
         PhoneBookEntry *p = phonebook;
         if(p != null)
         {
-          serial.printf("Phonebook entries:%s",EOLNC);
+          serial.printf(F("Phonebook entries:%s"),EOLNC);
           while(p != null)
           {
             if(strlen(p->notes)>0)
-              serial.printf("  [%lu] %s (%s)%s",p->number, p->address, p->notes, EOLNC);
+              serial.printf(F("  [%lu] %s (%s)%s"),p->number, p->address, p->notes, EOLNC);
             else
-              serial.printf("  [%lu] %s%s",p->number, p->address, EOLNC);
+              serial.printf(F("  [%lu] %s%s"),p->number, p->address, EOLNC);
             p=p->next;
           }
         }
-        serial.printf("%sEnter command, number to connect to, or ENTER to exit: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter command, number to connect to, or ENTER to exit: "),EOLNC,EOLNC);
         break;
       }
       case ZIRCMENU_NUM:
-        serial.printf("%sEnter a new fake phone number (digits ONLY)%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter a new fake phone number (digits ONLY)%s: "),EOLNC,EOLNC);
         break;
       case ZIRCMENU_ADDRESS:
       {
-        serial.printf("%sEnter a new hostname:port%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter a new hostname:port%s: "),EOLNC,EOLNC);
         break;
       }
       case ZIRCMENU_NICK:
       {
-        serial.printf("%sEnter a new nick-name%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sEnter a new nick-name%s: "),EOLNC,EOLNC);
         break;
       }
       case ZIRCMENU_OPTIONS:
       {
         ConnSettings flags(lastOptions.c_str());
-        serial.printf("%sConnection Options:%s",EOLNC,EOLNC);
-        serial.printf("[TELNET] Translation: %s%s",flags.telnet?"ON":"OFF",EOLNC);
-        serial.printf("[ECHO]: %s%s",flags.echo?"ON":"OFF",EOLNC);
-        serial.printf("[FLOW] Control: %s%s",flags.xonxoff?"XON/XOFF":flags.rtscts?"RTS/CTS":"DISABLED",EOLNC);
-        serial.printf("%sEnter option to toggle or ENTER to exit%s: ",EOLNC,EOLNC);
+        serial.printf(F("%sConnection Options:%s"),EOLNC,EOLNC);
+        serial.printf(F("[TELNET] Translation: %s%s"),flags.telnet?"ON":"OFF",EOLNC);
+        serial.printf(F("[ECHO]: %s%s"),flags.echo?"ON":"OFF",EOLNC);
+        serial.printf(F("[FLOW] Control: %s%s"),flags.xonxoff?"XON/XOFF":flags.rtscts?"RTS/CTS":"DISABLED",EOLNC);
+        serial.printf(F("%sEnter option to toggle or ENTER to exit%s: "),EOLNC,EOLNC);
         break;
       }
       case ZIRCMENU_NOTES:
       {
-        serial.printf("%sEnter some notes for this entry (%s)%s: ",EOLNC,lastNotes.c_str(),EOLNC);
+        serial.printf(F("%sEnter some notes for this entry (%s)%s: "),EOLNC,lastNotes.c_str(),EOLNC);
         break;
       }
       case ZIRCMENU_COMMAND:
@@ -537,7 +537,7 @@ void ZIRCMode::loopMenuMode()
               {
                   int x = cmd.indexOf(':');
                   if(x>0)
-                    current->print("PONG "+cmd.substring(x+1)+"\r\n");
+                    current->print(String(F("PONG "))+cmd.substring(x+1)+"\r\n");
               }
               else
               switch(ircState)
@@ -547,13 +547,13 @@ void ZIRCMode::loopMenuMode()
                   if(cmd.indexOf("376")>=0)
                   {
                       ircState = ZIRCSTATE_COMMAND;
-                      serial.prints("* Commands: /join #<channel>, /list <filter>, or /quit.\r\n");
+                      serial.prints(F("* Commands: /join #<channel>, /list <filter>, or /quit.\r\n"));
                   }
                   else
                   if(cmd.indexOf("No Ident response")>=0)
                   {
-                      current->print("NICK "+nick+"\r\n");
-                      current->print("USER guest 0 * :"+nick+"\r\n");
+                      current->print(String(F("NICK "))+nick+"\r\n");
+                      current->print(String(F("USER guest 0 * :"))+nick+"\r\n");
                   }
                   else
                   if(cmd.indexOf("433")>=0)
@@ -568,8 +568,8 @@ void ZIRCMode::loopMenuMode()
                       else
                       {
                         nick = "_" + nick;
-                        current->print("NICK "+nick+"\r\n");
-                        current->print("USER guest 0 * :"+nick+"\r\n");
+                        current->print(String(F("NICK "))+nick+"\r\n");
+                        current->print(String(F("USER guest 0 * :"))+nick+"\r\n");
                         // above was user nick * * : nick
                       }
                   }
@@ -590,7 +590,7 @@ void ZIRCMode::loopMenuMode()
                   // Print copy of raw IRC messages for debugging. Comment in/out as needed.
                   if (debugRaw)
                   {
-                    serial.prints("RAW> " + cmd);
+                    serial.prints(String(F("RAW> ")) + cmd);
                     serial.prints(EOLNC);
                   }
                   int rawMsgStart = cmd.indexOf(":"); // raw IRC messages start with ':'
@@ -617,11 +617,11 @@ void ZIRCMode::loopMenuMode()
                       //serial.println("* sentTo: " + sentTo);
                       if (sentTo.startsWith("#")) // contains channel name in msg, so it is a channel message
                       {
-                        serial.print("[" + sentTo + "]: <" + fromNick+ "> " + theMessage);
+                        serial.print(String(F("[")) + sentTo + "]: <" + fromNick+ "> " + theMessage);
                       }
                       else
                       {
-                        serial.print("*PRIV* <" + fromNick+ "> " + theMessage);
+                        serial.print(String(F("*PRIV* <")) + fromNick+ "> " + theMessage);
                       }
                     }
                   }
@@ -630,7 +630,7 @@ void ZIRCMode::loopMenuMode()
                   {
                     int endOfNick = msgMetaData.indexOf("!");
                     String fromNick = msgMetaData.substring(0,endOfNick);
-                    serial.print("[" + fromNick+ ": QUIT (" + theMessage + ")");
+                    serial.print(String(F("[")) + fromNick+ ": QUIT (" + theMessage + ")");
                   }
                   else // JOIN - message when a client joins a channel we are in
                   if (msgMetaData.indexOf(" JOIN") > 0)
@@ -649,7 +649,7 @@ void ZIRCMode::loopMenuMode()
                     if((chanName.length()>0)&&(endOfNick>0))
                     {
                       String fromNick = msgMetaData.substring(0,endOfNick);
-                      serial.print("[" + fromNick+ " --> JOIN (" + chanName + ")");
+                      serial.print(String(F("[")) + fromNick+ " --> JOIN (" + chanName + ")");
                     }
                   }
                   else // PART - message when a client leaves a channel we are in
@@ -669,7 +669,7 @@ void ZIRCMode::loopMenuMode()
                     if((chanName.length()>0)&&(endOfNick>0))
                     {
                       String fromNick = msgMetaData.substring(0,endOfNick);
-                      serial.print("[" + fromNick+ " <-- PART (" + chanName + ")");
+                      serial.print(String(F("[")) + fromNick+ " <-- PART (" + chanName + ")");
                     }
                   }
                   else // 353 = Names (lists all nicknames on channel) -- ignore this to prevent nickname spam on channel join
@@ -680,7 +680,7 @@ void ZIRCMode::loopMenuMode()
                   else // 332 = TOPIC
                   if (cmd.indexOf("332") >= 0)
                   {
-                    serial.prints("TOPIC: " + theMessage);
+                    serial.prints(String(F("TOPIC: ")) + theMessage);
                   }
                   else // 322 = LIST
                   if (cmd.indexOf("322") >= 0)
@@ -708,35 +708,35 @@ void ZIRCMode::loopMenuMode()
                   if(msgMetaData.indexOf(" 366 ")>=0)
                   {
                     joinReceived=true;
-                    serial.prints("Channel joined.  Enter a message to send to channel.");
+                    serial.prints(F("Channel joined.  Enter a message to send to channel."));
                     serial.prints(EOLNC);
-                    serial.prints("/msg <nick> <message>, /part #<channel>, /switch #<channel>, /list, or /quit.");
+                    serial.prints(F("/msg <nick> <message>, /part #<channel>, /switch #<channel>, /list, or /quit."));
                     serial.prints(EOLNC);
                   }
                   else // Handle message types from WHOIS lookups 319 = WHOIS (Channel)
                   if (msgMetaData.indexOf(" 319 ") > 0)
                   {
-                    serial.prints("W| " + cmd.substring(cmd.indexOf(" 319 ")));
+                    serial.prints(String(F("W| ")) + cmd.substring(cmd.indexOf(" 319 ")));
                   }
                   else // 312 = WHOIS (server)
                   if (msgMetaData.indexOf(" 312 ") > 0)
                   {
-                    serial.prints("W| " + cmd.substring(cmd.indexOf(" 312 ")));
+                    serial.prints(String(F("W| ")) + cmd.substring(cmd.indexOf(" 312 ")));
                   }
                   else // 311 = WHOIS (hostmask)
                   if (msgMetaData.indexOf(" 311 ") > 0)
                   {
-                    serial.prints("W| " + cmd.substring(cmd.indexOf(" 311 ")));
+                    serial.prints(String(F("W| ")) + cmd.substring(cmd.indexOf(" 311 ")));
                   }
                   else // 330 = WHOIS (hostmask)
                   if (msgMetaData.indexOf(" 330 ") > 0)
                   {
-                    serial.prints("W| " + cmd.substring(cmd.indexOf(" 330 ")));
+                    serial.prints(String(F("W| ")) + cmd.substring(cmd.indexOf(" 330 ")));
                   }
                   else // 671 = WHOIS (hostmask)
                   if (msgMetaData.indexOf(" 671 ") > 0)
                   {
-                    serial.prints("W| " + cmd.substring(cmd.indexOf(" 671 ")));
+                    serial.prints(String(F("W| ")) + cmd.substring(cmd.indexOf(" 671 ")));
                   }
                   else
                     serial.prints(theMessage);
@@ -744,7 +744,7 @@ void ZIRCMode::loopMenuMode()
                   break;
                 }
                 default:
-                  serial.prints("unknown state\n\r");
+                  serial.prints(F("unknown state\n\r"));
                   switchBackToCommandMode();
                   break;
               }
@@ -755,8 +755,8 @@ void ZIRCMode::loopMenuMode()
               if(millis()>timeout)
               {
                 timeout = millis()+60000;
-                current->print("NICK "+nick+"\r\n");
-                current->print("USER guest 0 * :"+nick+"\r\n");
+                current->print(String(F("NICK "))+nick+"\r\n");
+                current->print(String(F("USER guest 0 * :"))+nick+"\r\n");
               }
             }
         }

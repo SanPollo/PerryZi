@@ -25,9 +25,9 @@ void ZStream::switchTo(WiFiClientNode *conn)
   serial.setFlowControlType(getFlowControl());
   currMode=&streamMode;
   checkBaudChange();
-  if(pinSupport[pinDTR])
+  if(pinIsSupported(pinDTR))
     lastDTR = digitalRead(pinDTR);
-  if(pinSupport[pinOTH])
+  if(pinIsSupported(pinOTH))
     lastPDP = digitalRead(pinOTH);
   switchAlarm = millis() + 3000;
 }
@@ -153,14 +153,14 @@ void ZStream::switchBackToCommandMode(bool pppMode)
       if(commandMode.numericResponses)
       {
         preEOLN(commandMode.EOLN);
-        serial.prints("3");
+        serial.prints(F("3"));
         serial.prints(commandMode.EOLN);
       }
       else
       if(current->isAnswered())
       {
         preEOLN(commandMode.EOLN);
-        serial.prints("NO CARRIER");
+        serial.prints(F("NO CARRIER"));
         serial.prints(commandMode.EOLN);
       }
     }
@@ -224,7 +224,7 @@ void ZStream::doHangupChecks()
 {
   if(hangupType == HANGUP_DTR)
   {
-    if(pinSupport[pinDTR])
+    if(pinIsSupported(pinDTR))
     {
       if(lastDTR==dtrActive)
       {
@@ -244,7 +244,7 @@ void ZStream::doHangupChecks()
   else
   if(hangupType == HANGUP_PDP)
   {
-    if(pinSupport[pinOTH])
+    if(pinIsSupported(pinOTH))
     {
       if(lastPDP==othActive)
       {

@@ -134,13 +134,13 @@ static bool isChangedBit()
   {
     switch(i)
     {
-      case 0: val = pinCache[pinDCD]; break;
+      case 0: val = pinIsSupported(pinDCD) ? pinCache[pinDCD] : 0; break;
       case 1: val = digitalRead(pinCTS); break;
-      case 2: val = pinCache[pinRTS]; break;
-      case 3: val = pinCache[pinDSR]; break;
+      case 2: val = pinIsSupported(pinRTS) ? pinCache[pinRTS] : 0; break;
+      case 3: val = pinIsSupported(pinDSR) ? pinCache[pinDSR] : 0; break;
       case 4: val = digitalRead(pinDTR); break;
       case 5: val = digitalRead(pinOTH); break;
-      case 6: val = pinCache[pinRI]; break;
+      case 6: val = pinIsSupported(pinRI) ? pinCache[pinRI] : 0; break;
     }
     if(pinLook[i] != val)
     {

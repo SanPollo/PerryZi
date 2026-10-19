@@ -70,6 +70,8 @@ static int ping(char *host)
     delay(1);
   pbuf_free(packet);
   raw_remove(ping_pcb);
-  return (tm > 0)? (int)(millis()-tm) : -1;
+  // The round trip: from sending to the reply arriving (tm, set by
+  // ping_recv).
+  return (tm > 0)? (int)(tm-startTm) : -1;
 }
 #endif

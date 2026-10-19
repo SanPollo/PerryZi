@@ -54,7 +54,7 @@ bool FTPHost::doLS(ZSerial *serial, const char *remotepath)
     else
     {
       char buf[strlen(file)+2];
-      sprintf(buf,"%s/",file);
+      sprintf_P(buf,PSTR("%s/"),file);
       setCharArray(&path, buf);
     }
   }
@@ -75,18 +75,18 @@ void FTPHost::fixPath(const char *remotepath)
     if(end != 0)
     {
       *end = 0;
-      sprintf(pbuf,"%s/",remotepath);
+      sprintf_P(pbuf,PSTR("%s/"),remotepath);
     }
     else
       strcpy(pbuf, "/");
   }
   else
   {
-    sprintf(fbuf,"%s%s",path,remotepath);
+    sprintf_P(fbuf,PSTR("%s%s"),path,remotepath);
     if(end != 0)
     {
       *end = 0;
-      sprintf(pbuf,"%s%s/",path,remotepath);
+      sprintf_P(pbuf,PSTR("%s%s/"),path,remotepath);
     }
     else
       strcpy(pbuf, path);
@@ -184,7 +184,7 @@ bool parseFTPUrl(uint8_t *vbuf, char **hostIp, char **req, int *port, bool *doSS
      portB++;
      *port = atoi(portB);
      if(*port <= 0)
-       return ZERROR;
+       return false;
   }
   return true;
 }
@@ -289,16 +289,16 @@ static bool doFTPLogin(WiFiClient *cc, const char *hostIp, int port, const char 
   cc->setNoDelay(DEFAULT_NO_DELAY);
   readBytesToSilence(cc);
   if(username == NULL)
-    cc->printf("USER anonymous\r\n");
+    cc->printf_P(PSTR("USER anonymous\r\n"));
   else
-    cc->printf("USER %s\r\n",username);
+    cc->printf_P(PSTR("USER %s\r\n"),username);
   int respCode = getFTPResponseCode(cc, NULL);
   if(respCode != 331)
     return doFTPQuit(&cc);
   if(pw == NULL)
-    cc->printf("PASS zimodem@zimtime.net\r\n");
+    cc->printf_P(PSTR("PASS zimodem@zimtime.net\r\n"));
   else
-    cc->printf("PASS %s\r\n",pw);
+    cc->printf_P(PSTR("PASS %s\r\n"),pw);
   respCode = getFTPResponseCode(cc, NULL);
   if(respCode != 230)
     return doFTPQuit(&cc);
@@ -309,7 +309,7 @@ static bool doFTPLogin(WiFiClient *cc, const char *hostIp, int port, const char 
 static WiFiClient *doFTPPassive(WiFiClient *cc, bool doSSL)
 {
   char ipbuf[129];
-  cc->printf("PASV\r\n");
+  cc->printf_P(PSTR("PASV\r\n"));
   int respCode = getFTPResponseCode(cc, ipbuf);
   if(respCode != 227)
   {
@@ -342,7 +342,7 @@ static WiFiClient *doFTPPassive(WiFiClient *cc, bool doSSL)
     doFTPQuit(&cc);
     return 0;
   }
-  sprintf(ipbuf,"%d.%d.%d.%d",digits[0],digits[1],digits[2],digits[3]);
+  sprintf_P(ipbuf,PSTR("%d.%d.%d.%d"),digits[0],digits[1],digits[2],digits[3]);
   int dataPort = (256 * digits[4]) + digits[5];
   // ok, now we are ready for DATA!
   if(WiFi.status() != WL_CONNECTED)
@@ -367,7 +367,7 @@ FTPClientPair *doFTPGetStream(const char *hostIp, int port, const char *remotepa
   WiFiClient *cc = createWiFiClient(doSSL);
   if(!doFTPLogin(cc, hostIp, port, username, pw))
     return 0;
-  cc->printf("TYPE I\r\n");
+  cc->printf_P(PSTR("TYPE I\r\n"));
   int respCode = getFTPResponseCode(cc, NULL);
   if(respCode < 0)
   {
@@ -377,7 +377,7 @@ FTPClientPair *doFTPGetStream(const char *hostIp, int port, const char *remotepa
   WiFiClient *c = doFTPPassive(cc, doSSL);
   if(c == 0)
     return 0;
-  cc->printf("RETR %s\r\n",remotepath);
+  cc->printf_P(PSTR("RETR %s\r\n"),remotepath);
   char lbuf[133];
   respCode = getFTPResponseCode(cc, lbuf);
   if((respCode < 0)||(respCode > 400))
@@ -400,7 +400,9 @@ FTPClientPair *doFTPGetStream(const char *hostIp, int port, const char *remotepa
         *responseSize=atoi(sob+1);
     }
   }
-  FTPClientPair *pair = (FTPClientPair *)malloc(sizeof(FTPClientPair));
+  // Created with new, not malloc(): FTPHost releases it with delete, which
+  // runs the destructor that closes both connections.
+  FTPClientPair *pair = new FTPClientPair();
   pair->cmdClient = cc;
   pair->dataClient = c;
   return pair;
@@ -419,14 +421,14 @@ bool doFTPGet(FS *fs, const char *hostIp, int port, const char *localpath, const
   WiFiClient *cc = createWiFiClient(doSSL);
   if(!doFTPLogin(cc, hostIp, port, username, pw))
     return false;
-  cc->printf("TYPE I\r\n");
+  cc->printf_P(PSTR("TYPE I\r\n"));
   int respCode = getFTPResponseCode(cc, NULL);
   if(respCode < 0)
     return doFTPQuit(&cc);
   WiFiClient *c = doFTPPassive(cc, doSSL);
   if(c == 0)
     return false;
-  cc->printf("RETR %s\r\n",remotepath);
+  cc->printf_P(PSTR("RETR %s\r\n"),remotepath);
   respCode = getFTPResponseCode(cc, NULL);
   if((respCode < 0)||(respCode > 400))
   {
@@ -462,14 +464,14 @@ bool doFTPPut(File &f, const char *hostIp, int port, const char *remotepath, con
   WiFiClient *cc = createWiFiClient(doSSL);
   if(!doFTPLogin(cc, hostIp, port, username, pw))
     return false;
-  cc->printf("TYPE I\r\n");
+  cc->printf_P(PSTR("TYPE I\r\n"));
   int respCode = getFTPResponseCode(cc, NULL);
   if(respCode < 0)
     return doFTPQuit(&cc);
   WiFiClient *c = doFTPPassive(cc, doSSL);
   if(c == 0)
     return false;
-  cc->printf("STOR %s\r\n",remotepath);
+  cc->printf_P(PSTR("STOR %s\r\n"),remotepath);
   respCode = getFTPResponseCode(cc, NULL);
   if((respCode < 0)||(respCode > 400))
   {
@@ -503,13 +505,13 @@ bool doFTPLS(ZSerial *serial, const char *hostIp, int port, const char *remotepa
   WiFiClient *cc = createWiFiClient(doSSL);
   if(!doFTPLogin(cc, hostIp, port, username, pw))
     return false;
-  cc->printf("TYPE A\r\n");
+  cc->printf_P(PSTR("TYPE A\r\n"));
   int respCode = getFTPResponseCode(cc, NULL);
   if(respCode < 0)
     return doFTPQuit(&cc);
   if((remotepath != NULL)&& (*remotepath != NULL))
   {
-    cc->printf("CWD %s\r\n",remotepath);
+    cc->printf_P(PSTR("CWD %s\r\n"),remotepath);
     respCode = getFTPResponseCode(cc, NULL);
     if((respCode < 0)||(respCode > 400))
       return doFTPQuit(&cc);
@@ -518,7 +520,7 @@ bool doFTPLS(ZSerial *serial, const char *hostIp, int port, const char *remotepa
   WiFiClient *c = doFTPPassive(cc, doSSL);
   if(c == 0)
     return false;
-  cc->printf("LIST\r\n",remotepath);
+  cc->printf_P(PSTR("LIST\r\n"),remotepath);
   respCode = getFTPResponseCode(cc, NULL);
   if((respCode < 0)||(respCode > 400))
   {

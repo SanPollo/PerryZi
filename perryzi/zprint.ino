@@ -68,7 +68,7 @@ void ZPrint::setTimeoutDelayMs(int ms)
 size_t ZPrint::writeChunk(char *s, int len)
 {
   char buf[25];
-  sprintf(buf,"%x\r\n",len);
+  sprintf_P(buf,PSTR("%x\r\n"),len);
   writeStr(buf);
   outStream->write((uint8_t *)s,len);
   if(logFileOpen)
@@ -107,7 +107,7 @@ ZResult ZPrint::switchToPostScript(char *prefix)
   payloadType = RAW;
   announcePrintJob(hostIp,port,req);
   ZResult result;
-  if(pinSupport[pinRTS])
+  if(pinIsSupported(pinRTS))
     s_pinWrite(pinRTS, rtsInactive);
   yield();
   wifiSock = new WiFiClientNode(hostIp,port,doSSL?FLAG_SECURE:0);
@@ -121,7 +121,7 @@ ZResult ZPrint::switchToPostScript(char *prefix)
     wifiSock = null;
   }
   yield();
-  if(pinSupport[pinRTS])
+  if(pinIsSupported(pinRTS))
     s_pinWrite(pinRTS, rtsActive);
   if((result != ZERROR)
   &&(prefix != 0)
@@ -251,13 +251,13 @@ ZResult ZPrint::finishSwitchTo(char *hostIp, char *req, int port, bool doSSL, Pr
     return ZERROR;
   }
   char portStr[10];
-  sprintf(portStr,"%d",port);
+  sprintf_P(portStr,PSTR("%d"),port);
   // send the request and http headers:
-  sprintf(pbuf,"POST /%s HTTP/1.1\r\n",req);
+  sprintf_P(pbuf,PSTR("POST /%s HTTP/1.1\r\n"),req);
   writeStr(pbuf);
   writeStr("Transfer-Encoding: chunked\r\n");
   writeStr("Content-Type: application/ipp\r\n");
-  sprintf(pbuf,"Host: %s:%d\r\n",hostIp,port);
+  sprintf_P(pbuf,PSTR("Host: %s:%d\r\n"),hostIp,port);
   writeStr(pbuf);
   writeStr("Connection: Keep-Alive\r\n");
   writeStr("User-Agent: PerryZi\r\n");
@@ -278,7 +278,7 @@ ZResult ZPrint::finishSwitchTo(char *hostIp, char *req, int port, bool doSSL, Pr
 
   // IPP version (1.1), operation-id (Print-Job = 0x0002), request-id (4 bytes)
   int requestId = jobNum + 1;
-  sprintf(pbuf,"%c%c%c%c%c%c%c%c%c",
+  sprintf_P(pbuf,PSTR("%c%c%c%c%c%c%c%c%c"),
     0x01, 0x01,                           // version 1.1
     0x00, 0x02,                           // operation: Print-Job
     0x00, 0x00, 0x00, (char)requestId,   // request-id (big-endian)
@@ -293,7 +293,7 @@ ZResult ZPrint::finishSwitchTo(char *hostIp, char *req, int port, bool doSSL, Pr
   writeChunk(pbuf, chunkLen);
 
   char uriBuffer[256];
-  sprintf(uriBuffer, "http://%s:%s/%s", hostIp, portStr, req);
+  sprintf_P(uriBuffer, PSTR("http://%s:%s/%s"), hostIp, portStr, req);
   int urllen = strlen(uriBuffer);
   chunkLen = buildIPPAttribute(pbuf, 0x45, "printer-uri", uriBuffer, urllen);
   writeChunk(pbuf, chunkLen);
@@ -301,11 +301,11 @@ ZResult ZPrint::finishSwitchTo(char *hostIp, char *req, int port, bool doSSL, Pr
   chunkLen = buildIPPAttribute(pbuf, 0x42, "requesting-user-name", "perryzi", 7);
   writeChunk(pbuf, chunkLen);
 
-  sprintf(pbuf,"%c", 0x02);
+  sprintf_P(pbuf,PSTR("%c"), 0x02);
   writeChunk(pbuf,1);
 
   char jobName[12];
-  sprintf(jobName, "perryzi-j%c%c", jobChar1, jobChar2);
+  sprintf_P(jobName, PSTR("perryzi-j%c%c"), jobChar1, jobChar2);
   chunkLen = buildIPPAttribute(pbuf, 0x42, "job-name", jobName, 11);
   writeChunk(pbuf, chunkLen);
 
@@ -337,7 +337,7 @@ ZResult ZPrint::finishSwitchTo(char *hostIp, char *req, int port, bool doSSL, Pr
   chunkLen = buildIPPAttribute(pbuf, 0x49, "document-format", mimeType, mimeTypeLen);
   writeChunk(pbuf, chunkLen);
 
-  sprintf(pbuf,"%c", 0x03);
+  sprintf_P(pbuf,PSTR("%c"), 0x03);
   writeChunk(pbuf,1);
 
   outStream->flush();

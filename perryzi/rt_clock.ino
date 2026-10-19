@@ -137,8 +137,12 @@ void RealTimeClock::tick()
           mm = atoi(tz.substring(x+1).c_str());
           tz = tz.substring(0,x);
         }
-        uint32_t echg = (atoi(tz.c_str()) * 3600);
-        echg += ((echg < 0)?(-(mm * 60)):(mm * 60));
+        // Signed, and the sign taken from the text: "-3:30" is -3 hours
+        // and -30 minutes (an unsigned sum was never negative, so the
+        // minutes were always added and -3:30 became -2:30).
+        bool westOfUtc = tz.startsWith("-");
+        int32_t echg = (atoi(tz.c_str()) * 3600);
+        echg += westOfUtc ? (-(mm * 60)) : (mm * 60);
         setByUnixEpoch(epoch + echg);
         debugPrintf("Received NTP: %d/%d/%d %d:%d:%d\n\r",(int)getMonth(),(int)getDay(),(int)getYear(),(int)getHour(),(int)getMinute(),(int)getSecond());
       }
@@ -421,7 +425,8 @@ bool RealTimeClock::sendTimeRequest()
       port=atoi(host.substring(pi+1).c_str());
       host = host.substring(0,pi);
     }
-    WiFi.hostByName(ntpServerName.c_str(), timeServerIP);
+    // host is the server name without any ":port" suffix.
+    WiFi.hostByName(host.c_str(), timeServerIP);
     udp.beginPacket(timeServerIP, port); //NTP requests are to port 123
     udp.write(packetBuffer, NTP_PACKET_SIZE);
     udp.endPacket();
@@ -501,7 +506,8 @@ int RealTimeClock::getTimeZoneCode()
 
 void RealTimeClock::setTimeZoneCode(int val)
 {
-  if((tzCode >= 0)&&(tzCode < 243))
+  // val indexes TimeZones[243]; anything else is ignored.
+  if((val >= 0)&&(val < 243))
   {
     tzCode = val;
     forceUpdate();
@@ -563,38 +569,38 @@ String RealTimeClock::getCurrentTimeFormatted()
   String f=format;
   if(f.indexOf("%yyyy")>=0)
   {
-    sprintf(str,"%04d",(int)c.getYear());
+    sprintf_P(str,PSTR("%04d"),(int)c.getYear());
     f.replace("%yyyy",str);
   }
   if(f.indexOf("%yy")>=0)
   {
     int y=c.getYear();
-    sprintf(str,"%02d",y % 100);
+    sprintf_P(str,PSTR("%02d"),y % 100);
     f.replace("%yy",str);
   }
   if(f.indexOf("%y")>=0)
   {
-    sprintf(str,"%d",(int)c.getYear());
+    sprintf_P(str,PSTR("%d"),(int)c.getYear());
     f.replace("%y",str);
   }
   if(f.indexOf("%MM")>=0)
   {
-    sprintf(str,"%02d",(int)c.getMonth());
+    sprintf_P(str,PSTR("%02d"),(int)c.getMonth());
     f.replace("%MM",str);
   }
   if(f.indexOf("%M")>=0)
   {
-    sprintf(str,"%d",(int)c.getMonth());
+    sprintf_P(str,PSTR("%d"),(int)c.getMonth());
     f.replace("%M",str);
   }
   if(f.indexOf("%dd")>=0)
   {
-    sprintf(str,"%02d",(int)c.getDay());
+    sprintf_P(str,PSTR("%02d"),(int)c.getDay());
     f.replace("%dd",str);
   }
   if(f.indexOf("%d")>=0)
   {
-    sprintf(str,"%d",(int)c.getDay());
+    sprintf_P(str,PSTR("%d"),(int)c.getDay());
     f.replace("%d",str);
   }
   if(f.indexOf("%ee")>=0)
@@ -609,12 +615,12 @@ String RealTimeClock::getCurrentTimeFormatted()
   }
   if(f.indexOf("%HH")>=0)
   {
-    sprintf(str,"%02d",(int)c.getHour());
+    sprintf_P(str,PSTR("%02d"),(int)c.getHour());
     f.replace("%HH",str);
   }
   if(f.indexOf("%H")>=0)
   {
-    sprintf(str,"%d",(int)c.getHour());
+    sprintf_P(str,PSTR("%d"),(int)c.getHour());
     f.replace("%H",str);
   }
   if(f.indexOf("%hh")>=0)
@@ -622,7 +628,7 @@ String RealTimeClock::getCurrentTimeFormatted()
     if((c.getHour()%12)==0)
       strcpy(str,"12");
     else
-      sprintf(str,"%02d",c.getHour()%12);
+      sprintf_P(str,PSTR("%02d"),c.getHour()%12);
     f.replace("%hh",str);
   }
   if(f.indexOf("%h")>=0)
@@ -630,27 +636,27 @@ String RealTimeClock::getCurrentTimeFormatted()
     if((c.getHour()%12)==0)
       strcpy(str,"12");
     else
-      sprintf(str,"%d",(int)(c.getHour() % 12));
+      sprintf_P(str,PSTR("%d"),(int)(c.getHour() % 12));
     f.replace("%h",str);
   }
   if(f.indexOf("%mm")>=0)
   {
-    sprintf(str,"%02d",(int)c.getMinute());
+    sprintf_P(str,PSTR("%02d"),(int)c.getMinute());
     f.replace("%mm",str);
   }
   if(f.indexOf("%m")>=0)
   {
-    sprintf(str,"%d",(int)c.getMinute());
+    sprintf_P(str,PSTR("%d"),(int)c.getMinute());
     f.replace("%m",str);
   }
   if(f.indexOf("%ss")>=0)
   {
-    sprintf(str,"%02d",(int)c.getSecond());
+    sprintf_P(str,PSTR("%02d"),(int)c.getSecond());
     f.replace("%ss",str);
   }
   if(f.indexOf("%s")>=0)
   {
-    sprintf(str,"%d",(int)c.getSecond());
+    sprintf_P(str,PSTR("%d"),(int)c.getSecond());
     f.replace("%s",str);
   }
   if(f.indexOf("%AA")>=0)

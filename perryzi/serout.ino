@@ -130,7 +130,7 @@ bool ZSerial::isSerialOut()
   switch(flowControlType)
   {
   case FCT_RTSCTS:
-    if(pinSupport[pinCTS])
+    if(pinIsSupported(pinCTS))
     {
       //debugPrintf("CTS: pin %d (%d == %d)\r\n",pinCTS,digitalRead(pinCTS),ctsActive);
       return (digitalRead(pinCTS) == ctsActive);
@@ -152,7 +152,7 @@ bool ZSerial::isSerialCancelled()
 {
   if(flowControlType == FCT_RTSCTS)
   {
-    if(pinSupport[pinCTS])
+    if(pinIsSupported(pinCTS))
     {
       //debugPrintf("CTS: pin %d (%d == %d)\r\n",pinCTS,digitalRead(pinCTS),ctsActive);
       return (digitalRead(pinCTS) == ctsInactive);
@@ -223,6 +223,15 @@ void ZSerial::prints(const char *expr)
   }
 }
 
+// Flash (F()) strings must be read with pgm_read_byte(): a plain byte load
+// from flash raises a LoadStoreError exception on the ESP8266.
+void ZSerial::prints(const __FlashStringHelper *expr)
+{
+  PGM_P p = reinterpret_cast<PGM_P>(expr);
+  for(char c = pgm_read_byte(p); c != 0; c = pgm_read_byte(++p))
+    enqueByte(c);
+}
+
 void ZSerial::printi(int i)
 {
   char buf[12];
@@ -274,6 +283,16 @@ void ZSerial::printf(const char* format, ...)
   va_list arglist;
   va_start(arglist, format);
   vsnprintf(FBUF, sizeof(FBUF), format, arglist);
+  prints(FBUF);
+  va_end(arglist);
+}
+
+// As printf() above, with the format string in flash (F()).
+void ZSerial::printf(const __FlashStringHelper *format, ...)
+{
+  va_list arglist;
+  va_start(arglist, format);
+  vsnprintf_P(FBUF, sizeof(FBUF), reinterpret_cast<PGM_P>(format), arglist);
   prints(FBUF);
   va_end(arglist);
 }

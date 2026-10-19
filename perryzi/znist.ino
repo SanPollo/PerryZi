@@ -33,7 +33,7 @@ String znistGetDateTimeUTC()
   if(c.getYear() < 2020)
     return String("NO TIME");
   char buf[32];
-  sprintf(buf,"%02d-%02d-%02d %02d:%02d:%02d",
+  sprintf_P(buf,PSTR("%02d-%02d-%02d %02d:%02d:%02d"),
           (int)(c.getYear()%100),
           (int)c.getMonth(),
           (int)c.getDay(),

@@ -66,6 +66,7 @@ class ZSerial : public Stream
     
     void prints(String str);
     void prints(const char *expr);
+    void prints(const __FlashStringHelper *expr);
     void printc(const char c);
     void printc(uint8_t c);
     virtual size_t write(uint8_t c);
@@ -74,6 +75,7 @@ class ZSerial : public Stream
     void printd(double f);
     void printi(int i);
     void printf(const char* format, ...);
+    void printf(const __FlashStringHelper *format, ...);
     void flush();
     void flushAlways();
     int availableForWrite();

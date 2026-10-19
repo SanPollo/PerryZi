@@ -84,7 +84,7 @@ WiFiClient *doGopherGetStream(const char *hostIp, int port, const char *req, boo
   const char *root = "";
   if(req == NULL)
     req=root;
-  c->printf("%s\r\n",req);
+  c->printf_P(PSTR("%s\r\n"),req);
   c->flush();
   *responseSize = 0;
   return c;
@@ -113,10 +113,10 @@ WiFiClient *doWebGetStream(const char *hostIp, int port, const char *req, bool d
   if(*req == '/')
     req++;
   
-  c->printf("GET /%s HTTP/1.1\r\n",req);
-  c->printf("User-Agent: PerryZi Firmware\r\n");
-  c->printf("Host: %s\r\n",hostIp);
-  c->printf("Connection: close\r\n\r\n");
+  c->printf_P(PSTR("GET /%s HTTP/1.1\r\n"),req);
+  c->printf_P(PSTR("User-Agent: PerryZi Firmware\r\n"));
+  c->printf_P(PSTR("Host: %s\r\n"),hostIp);
+  c->printf_P(PSTR("Connection: close\r\n\r\n"));
   
   String ln = "";
   String reUrl = "";

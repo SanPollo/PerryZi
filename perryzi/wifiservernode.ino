@@ -188,19 +188,19 @@ void WiFiServerNode::SaveWiFiServers()
   WiFiServerNode *serv = servs;
   while(serv != null)
   {
-    f.printf("%d,%d\n",serv->port,serv->flagsBitmap);
+    f.printf_P(PSTR("%d,%d\n"),serv->port,serv->flagsBitmap);
     if(serv->maskOuts == NULL)
-      f.printf("0,\n");
+      f.printf_P(PSTR("0,\n"));
     else
-      f.printf("%d,%s\n",strlen(serv->maskOuts),serv->maskOuts);
+      f.printf_P(PSTR("%d,%s\n"),strlen(serv->maskOuts),serv->maskOuts);
     if(serv->delimiters == NULL)
-      f.printf("0,\n");
+      f.printf_P(PSTR("0,\n"));
     else
-      f.printf("%d,%s\n",strlen(serv->delimiters),serv->delimiters);
+      f.printf_P(PSTR("%d,%s\n"),strlen(serv->delimiters),serv->delimiters);
     if(serv->stateMachine == NULL)
-      f.printf("0,\n");
+      f.printf_P(PSTR("0,\n"));
     else
-      f.printf("%d,%s\n",strlen(serv->stateMachine),serv->stateMachine);
+      f.printf_P(PSTR("%d,%s\n"),strlen(serv->stateMachine),serv->stateMachine);
     ct++;
     serv=serv->next;
   }

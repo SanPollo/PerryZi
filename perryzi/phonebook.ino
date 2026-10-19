@@ -61,9 +61,13 @@ PhoneBookEntry::~PhoneBookEntry()
     if(last != null)
       last->next = next;
   }
-  freeCharArray((char **)&address);
-  freeCharArray((char **)&modifiers);
-  freeCharArray((char **)&notes);
+  // Allocated with new char[] in the constructor, so released with delete[].
+  delete[] address;
+  delete[] modifiers;
+  delete[] notes;
+  address = null;
+  modifiers = null;
+  notes = null;
   next=null;
 }
 
@@ -151,7 +155,7 @@ void PhoneBookEntry::savePhonebook()
   PhoneBookEntry *phb=phonebook;
   while(phb != null)
   {
-    f.printf("%ul,%s,%s,%s\n",phb->number,phb->address,phb->modifiers,phb->notes);
+    f.printf_P(PSTR("%ul,%s,%s,%s\n"),phb->number,phb->address,phb->modifiers,phb->notes);
     phb = phb->next;
     ct++;
   }

@@ -136,7 +136,7 @@ WiFiClientNode::~WiFiClientNode()
       clientPtr->stop();
     else
       client.stop();
-    delete host;
+    delete[] host;      // allocated with new char[]
     host=null;
   }
   if(clientPtr != null)
