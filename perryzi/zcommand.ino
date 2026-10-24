@@ -140,6 +140,8 @@ void ZCommand::setConfigDefaults()
   autoStreamMode=false; // should prob have been true all along, ats0 takes care of this.
   telnetSupport=true;
   preserveListeners=false;
+  autoSlip=true;
+  autoPpp=true;
   ringCounter=1;
   streamMode.setHangupType(HANGUP_NONE);
   serial.setFlowControlType(DEFAULT_FCT);
@@ -395,7 +397,8 @@ bool ZCommand::reSaveConfig(int retries)
   f.printf_P(PSTR("%s,%s,%s,"),zclockFormathex.c_str(),zclockHosthex.c_str(),hostnamehex.c_str());
   f.printf_P(PSTR("%d,%s,%s,"),printMode.getTimeoutDelayMs(),printSpechex.c_str(),termTypehex.c_str());
   f.printf_P(PSTR("%s,%s,%s,%s,"),staticIPstr.c_str(),staticDNSstr.c_str(),staticGWstr.c_str(),staticSNstr.c_str());
-  f.printf_P(PSTR("%s,%d,%d,%d"),busyMsghex.c_str(),telnetSupport,streamMode.getHangupType(),dropNull);
+  f.printf_P(PSTR("%s,%d,%d,%d,"),busyMsghex.c_str(),telnetSupport,streamMode.getHangupType(),dropNull);
+  f.printf_P(PSTR("%d,%d"),autoSlip,autoPpp);
   f.close();
   delay(500);
   if(SPIFFS.exists(CONFIG_FILE))
@@ -514,6 +517,11 @@ void ZCommand::setOptionsFromSavedConfig(String configArguments[])
     streamMode.setHangupType((HangupType)atoi(configArguments[CFG_S63_HANGUP].c_str()));
   if(configArguments[CFG_S64_DROPNULL].length()>0)
     dropNull = atoi(configArguments[CFG_S64_DROPNULL].c_str());
+  // A file saved before 1.2.6 has no S65 or S66: the defaults (on) stay.
+  if(configArguments[CFG_S65_AUTOSLIP].length()>0)
+    autoSlip = atoi(configArguments[CFG_S65_AUTOSLIP].c_str());
+  if(configArguments[CFG_S66_AUTOPPP].length()>0)
+    autoPpp = atoi(configArguments[CFG_S66_AUTOPPP].c_str());
   if(configArguments[CFG_S60_LISTEN].length()>0)
   {
     preserveListeners = atoi(configArguments[CFG_S60_LISTEN].c_str());
@@ -812,6 +820,10 @@ ZResult ZCommand::doInfoCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber
     }
     if(dropNull || showAll)
       serial.prints(dropNull ? "S64=1" : "S64=0");
+    if((!autoSlip) || showAll)
+      serial.prints(autoSlip ? F("S65=1") : F("S65=0"));
+    if((!autoPpp) || showAll)
+      serial.prints(autoPpp ? F("S66=1") : F("S66=0"));
     if((logFileOpen) || showAll)
       serial.prints((logFileOpen && !logFile2Uart) ? "&O1" : ((logFileOpen && logFile2Uart) ? "&O88" : "&O0"));
     serial.prints(EOLN);
@@ -1933,6 +1945,10 @@ int ZCommand::getStatusRegister(const int snum, int crc8)
    }
  case 64:
    return dropNull ? 1 : 0;
+ case 65:
+   return autoSlip ? 1 : 0;
+ case 66:
+   return autoPpp ? 1 : 0;
  default:
     break;
   }
@@ -2165,6 +2181,12 @@ ZResult ZCommand::setStatusRegister(const int snum, const int sval, int *crc8, c
  case 64:
    dropNull = (sval > 0);
    break;
+ case 65:
+   autoSlip = (sval > 0);
+   break;
+ case 66:
+   autoPpp = (sval > 0);
+   break;
  default:
     break;
   }
@@ -2256,10 +2278,62 @@ ZResult ZCommand::doEOLNCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber
 bool ZCommand::readSerialStream()
 {
   bool crReceived=false;
-  while((HWSerial.available()>0) && (!crReceived))
+  while(!crReceived)
   {
+#if INCLUDE_SLIP || INCLUDE_PPP
+    // In command mode itself (the configuration and IRC modes read their
+    // lines through here too), every byte passes the SLIP/PPP frame
+    // detector first (S65, S66), which gives back, in order, whatever is
+    // not part of a frame.
+    if(currMode == this)
+    {
+      int r = snifReleased();
+      if(r >= 0)
+      {
+        crReceived = commandByte((uint8_t)r);
+        continue;
+      }
+      if(HWSerial.available() <= 0)
+        break;
+      uint8_t c=HWSerial.read();
+      logSerialIn(c);
+      if(snifAutoInput(c))
+      {
+        // A frame has switched the modem to SLIP or PPP mode: the rest of
+        // the input is the mode's, and any half-typed command is dropped.
+        memset(nbuf,0,MAX_COMMAND_SIZE);
+        eon=0;
+        return false;
+      }
+      continue;
+    }
+#endif
+    if(HWSerial.available() <= 0)
+      break;
     uint8_t c=HWSerial.read();
     logSerialIn(c);
+    crReceived = commandByte(c);
+  }
+  return crReceived;
+}
+
+/* One byte of command input. Returns true when a command line is complete. */
+bool ZCommand::commandByte(uint8_t c)
+{
+  bool crReceived=false;
+  {
+    // A terminal that ends its lines with CR LF must not give two line
+    // ends: the menus would read the LF as an empty line (ENTER) and act on
+    // it, the main menus by exiting. So an LF (S4) straight after a CR (S3)
+    // is dropped, not echoed. A lone CR or a lone LF still ends a line.
+    // NULs, dropped below, leave this unchanged.
+    if((c==LF[0])&&lastWasCR&&(CR[0]!=LF[0]))
+    {
+      lastWasCR=false;
+      return false;
+    }
+    if(c>0)
+      lastWasCR=(c==CR[0]);
     if((c==CR[0])||(c==LF[0]))
     {
       if(doEcho)
@@ -2268,8 +2342,7 @@ bool ZCommand::readSerialStream()
         if(serial.isSerialOut())
           serialOutDeque();
       }
-      crReceived=true;
-      break;
+      return true;
     }
     
     if(c>0)
@@ -2318,7 +2391,7 @@ bool ZCommand::readSerialStream()
                 serialOutDeque();
             }
           }
-          continue;
+          return false;
         }
         if(doEcho)
         {
@@ -3222,6 +3295,15 @@ void ZCommand::sendOfficialResponse(ZResult res)
         serial.prints(F("ERROR"));
       serial.prints(EOLN);
       break;
+    case ZNOCARRIER:
+      logPrintln("Response: NOCARRIER");
+      preEOLN(EOLN);
+      if(numericResponses)
+        serial.prints(F("3"));
+      else
+        serial.prints(F("NO CARRIER"));
+      serial.prints(EOLN);
+      break;
     case ZNOANSWER:
       logPrintln("Response: NOANSWER");
       preEOLN(EOLN);
@@ -3857,6 +3939,16 @@ void ZCommand::serialIncoming()
 
 void ZCommand::loop()
 {
+#if INCLUDE_SLIP || INCLUDE_PPP
+  // A '~' held back by the frame detector for long enough was typed, and
+  // a possible frame that has stopped is given up: either may give bytes
+  // back, which are handled as if they had just arrived.
+  snifAutoPoll();
+  if(snifReleaseWaiting())
+    serialIncoming();
+  if(currMode != this)
+    return;
+#endif
   checkPlusPlusPlusDisconnect();
 #ifdef ESPRESSIF_CMDS
   // The Espressif layer writes through its own ZSerial instance, which

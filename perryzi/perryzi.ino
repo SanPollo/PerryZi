@@ -20,7 +20,7 @@
 // ***************************************************************************
 // Global definitions - USER DEFINABLE OPTIONS START ON LINE 61!
 
-#define PERRYZI_VERSION "1.2.5"
+#define PERRYZI_VERSION "1.2.6"
 const char compile_date[] = __DATE__ " " __TIME__;
 #define DEFAULT_NO_DELAY true
 #define null 0
@@ -386,6 +386,10 @@ static unsigned long resetPushTimer=0;
 static int tempBaud = -1; // -1 do nothing
 static unsigned int plussesInARow = 0;
 static unsigned long lastInputTimeMs = 0;
+// The escape sequence's guard time: the silence needed before and after the
+// three escape characters (default +++), and the most time allowed between
+// them. One second, as the Hayes S12 register's default (50 x 20 ms).
+#define ESCAPE_GUARD_MS 1000
 static int dcdStatus = DEFAULT_DCD_INACTIVE;
 static int pinDCD = DEFAULT_PIN_DCD;
 static int pinCTS = DEFAULT_PIN_CTS;
@@ -583,7 +587,7 @@ static int processPlusPlusPlus(uint8_t c)
   int plusOut = 0;
   if(c == commandMode.EC)
   {
-    bool timeout = (millis()-lastInputTimeMs)>900;
+    bool timeout = (millis()-lastInputTimeMs)>=ESCAPE_GUARD_MS;
     if(plussesInARow==0)
     {
       if(timeout)
@@ -619,7 +623,7 @@ static int processPlusPlusPlus(uint8_t c)
 
 static bool checkPlusPlusPlusEscape()
 {
-  if((plussesInARow == 3) && ((millis()-lastInputTimeMs)>900))
+  if((plussesInARow == 3) && ((millis()-lastInputTimeMs)>=ESCAPE_GUARD_MS))
   {
     plussesInARow = 0;
     return true;

@@ -51,6 +51,45 @@
 
    NAPT needs an lwIP variant "with features" (IP_FORWARD and IP_NAPT); the
    board menu default, "v2 Lower Memory", is one.
+
+   Leaving the modes
+
+   Both modes end with the escape sequence used everywhere else: a second
+   of silence, the escape character (S2, default '+') three times, and a
+   second of silence (ESCAPE_GUARD_MS). A working SLIP or PPP host cannot
+   send this by accident: every frame begins and ends with a delimiter
+   (0xC0 for SLIP, 0x7E for PPP), so the last byte before a pause on the
+   line is never the escape character, and a packet after a pause starts
+   with a delimiter or an IPv4 header (0x45 to 0x4F), never with '+'. The
+   escape is not recognised if S2 is set to one of the framing bytes. SLIP
+   mode then ends at once; PPP mode first closes the session with the host
+   (LCP Terminate-Request). Either way the modem answers NO CARRIER.
+
+   Entering the modes automatically
+
+   In command mode, a complete frame from the host switches the modem to
+   SLIP (S65=1) or PPP (S66=1) mode without any AT command, and the frame
+   is then handled by the mode, so network software can simply start
+   sending. Nothing typed on an ASCII terminal can do this:
+
+   - SLIP: 0xC0, then a valid IPv4 packet (version 4, header checksum
+     correct, total length equal to the frame's length), then 0xC0. 0xC0 is
+     not an ASCII character.
+   - PPP: an LCP Configure-Request, which is what a PPP host always sends
+     first: 0x7E, 0xFF, 0x03, 0xC0, 0x21, code 1, ..., a correct frame
+     check sequence, 0x7E. RFC 1661 requires the full address, control and
+     protocol fields in LCP packets, so 0xFF and 0xC0 are always present,
+     and neither is an ASCII character.
+
+   The bytes of a possible frame are held back (not echoed, not added to
+   the command line) until it is known whether they are one. If they are
+   not, the bytes that could have been typed are processed as usual,
+   slightly later: a '~' (0x7E) not followed by 0xFF, and the bytes after
+   a 0xC0 when the IPv4 header checks fail. What remains (0xC0, and a frame
+   that failed later checks, which no typing can produce) is dropped. The
+   modes are only ever entered from command mode, never while a connection
+   is open (so a file upload cannot trigger them), and AT+CIPSEND's data is
+   not looked at.
 */
 
 #ifndef PERRYZI_SERIALNETIF_H
@@ -90,7 +129,27 @@
 // The UART transmit FIFO size of the ESP8266.
 #define SNIF_UART_FIFO 128
 
+// Automatic entry: the most bytes of a possible PPP frame held back (an
+// LCP Configure-Request is far smaller), how long a possible frame may
+// pause before it is given up, and how long a lone '~' is held back.
+#define SNIF_AUTO_PPP_MAX   256
+#define SNIF_AUTO_GAP_MS    1000
+#define SNIF_AUTO_TILDE_MS  200
+
+// Bytes given back to command mode at once: at most a SLIP header (60)
+// and the byte that ended it, or a '~' and the byte after it.
+#define SNIF_RELEASE_MAX    64
+
 static bool snifNaptInit();
+static uint8_t *snifBuffer();
+static void snifEscapeStart();
+static void snifEscapeByte(uint8_t c);
+static bool snifEscaped();
+static bool snifAutoInput(uint8_t c);
+static void snifAutoPoll();
+static void snifAutoReset();
+static int snifReleased();
+static bool snifReleaseWaiting();
 static void snifStartOutput();
 static int snifTxFree();
 static void snifTxPut(uint8_t c);

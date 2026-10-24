@@ -30,9 +30,11 @@
    negotiation (LCP, IPCP with VJ header compression, DNS addresses). The
    host is given SNIF_PEER_ADDR, the modem takes SNIF_LOCAL_ADDR, and the
    DNS servers offered are the ones the ESP8266 uses on Wi-Fi. No
-   authentication is asked for. The mode ends, back to command mode, when
-   the PPP session does (normally when the host sends an LCP
-   Terminate-Request).
+   authentication is asked for. The mode is also entered when the host
+   sends an LCP Configure-Request in command mode (S66=1). It ends, back to
+   command mode, when the PPP session does: when the host closes it (LCP
+   Terminate-Request), or after the escape sequence, which closes it from
+   this side and answers NO CARRIER.
 */
 
 #ifndef PERRYZI_PPP_H
@@ -51,9 +53,11 @@ class PppMode : public ZMode
     netif_output_fn pppOutput = 0; // lwIP's own output function for nif
     volatile bool linkUp = false;
     volatile bool sessionOver = false;
+    bool escaped = false;       // the escape sequence is closing the session
     uint32_t dropped = 0;       // packets for the host that did not fit
     uint32_t droppedLogged = 0;
 
+    bool enter();
     void endSession();
 
     static u32_t serialOutput(ppp_pcb *pcb, u8_t *data, u32_t len,
@@ -64,6 +68,7 @@ class PppMode : public ZMode
 
   public:
     bool switchTo();
+    bool autoEnter(uint8_t *frame, int len);
     void serialIncoming();
     void loop();
 };

@@ -81,7 +81,9 @@ enum ConfigOptions
   CFG_S62_TELNET=38,
   CFG_S63_HANGUP=39,
   CFG_S64_DROPNULL=40,
-  CFG_LAST=40
+  CFG_S65_AUTOSLIP=41,
+  CFG_S66_AUTOPPP=42,
+  CFG_LAST=42
 };
 
 const ConfigOptions v2HexCfgs[] = {
@@ -129,6 +131,7 @@ class ZCommand : public ZMode
     uint8_t         nbuf[MAX_COMMAND_SIZE];
     char            hbuf[MAX_COMMAND_SIZE];
     int             eon                  = 0;
+    bool            lastWasCR            = false; // last byte was a CR (S3)
     int             lastServerClientId   = 0;
     bool            autoStreamMode       = false;
     bool            telnetSupport        = false;
@@ -148,6 +151,7 @@ class ZCommand : public ZMode
 
     void showInitMessage();
     bool readSerialStream();
+    bool commandByte(uint8_t c);
     bool checkPlusPlusPlusDisconnect();
     String getNextSerialCommand();
     ZResult doSerialCommand();
@@ -194,6 +198,8 @@ class ZCommand : public ZMode
     bool    longResponses;
     bool    doEcho;
     bool    dropNull            = false;
+    bool    autoSlip            = true;  // S65: a SLIP frame enters SLIP mode
+    bool    autoPpp             = true;  // S66: an LCP request enters PPP mode
     String  EOLN;
     char    EC                  = '+';
     char    ECS[32];

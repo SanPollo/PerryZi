@@ -105,17 +105,15 @@ err_t SlipMode::netifOutput(struct netif *netif, struct pbuf *p,
 }
 
 /*
-   Enter SLIP mode. Returns false, leaving the modem in command mode, if the
-   receive buffer, the NAPT table or the interface cannot be set up.
+   Set up and start SLIP mode. Returns false, leaving the modem in command
+   mode, if the receive buffer, the NAPT table or the interface cannot be
+   set up.
 */
-bool SlipMode::switchTo()
+bool SlipMode::enter()
 {
+  rxBuf = snifBuffer();
   if(rxBuf == 0)
-  {
-    rxBuf = (uint8_t *)malloc(SNIF_MTU);
-    if(rxBuf == 0)
-      return false;
-  }
+    return false;
   if(!snifNaptInit())
     return false;
   if(!netifAdded)
@@ -131,15 +129,24 @@ bool SlipMode::switchTo()
     // NAPT applies to packets that arrive on this interface and are
     // forwarded to another (Wi-Fi).
     ip_napt_enable_no(nif.num, 1);
-    netif_set_link_up(&nif);
-    netif_set_up(&nif);
   }
+  netif_set_link_up(&nif);
+  netif_set_up(&nif);
 
   rxLen = 0;
   rxEscaped = false;
   rxDiscard = false;
   snifStartOutput();
+  snifEscapeStart();
+  currMode = this;
+  snifLogf(PSTR("SLIP mode: interface %c%c%d up"), nif.name[0], nif.name[1],
+           nif.num);
+  return true;
+}
 
+/* Enter SLIP mode by command (AT+SLIP, ATDT5517545). */
+bool SlipMode::switchTo()
+{
   // As before the rewrite: give the host a moment to finish sending the
   // command line, then discard what is left of it (such as the LF after
   // the CR), so that it does not start the first frame.
@@ -147,11 +154,39 @@ bool SlipMode::switchTo()
   delay(999);
   while(HWSerial.available() > 0)
     HWSerial.read();
+  return enter();
+}
 
-  currMode = this;
-  snifLogf(PSTR("SLIP mode: interface %c%c%d up"), nif.name[0], nif.name[1],
-           nif.num);
+/*
+   Enter SLIP mode automatically: command mode has received a complete
+   SLIP frame of len bytes (S65), now in snifBuffer(), which is this mode's
+   receive buffer. No response is sent, as the host is already speaking
+   SLIP; the frame is handled as the first packet.
+*/
+bool SlipMode::autoEnter(int len)
+{
+  if(!enter())
+    return false;
+  snifLogf(PSTR("SLIP mode: entered automatically"));
+  rxLen = len;
+  deliver();
+  rxLen = 0;
   return true;
+}
+
+/* Leave SLIP mode (after the escape sequence), back to command mode. */
+void SlipMode::leave()
+{
+  // Down, so that nothing more is routed to the host; up again on entry.
+  netif_set_down(&nif);
+  netif_set_link_down(&nif);
+  rxLen = 0;
+  rxEscaped = false;
+  rxDiscard = false;
+  snifAutoReset();
+  currMode = &commandMode;
+  snifLogf(PSTR("SLIP mode: left by the escape sequence"));
+  commandMode.sendOfficialResponse(ZNOCARRIER);
 }
 
 /* One byte from the host. */
@@ -235,13 +270,21 @@ void SlipMode::serialIncoming()
     if(n <= 0)
       break;
     for(int i=0; i<n; i++)
+    {
+      snifEscapeByte(chunk[i]);
       receiveByte(chunk[i]);
+    }
     budget -= n;
   }
 }
 
 void SlipMode::loop()
 {
+  if(snifEscaped())
+  {
+    leave();
+    return;
+  }
   snifTxDrain();
   if(dropped != droppedLogged)
   {

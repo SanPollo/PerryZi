@@ -103,11 +103,11 @@ err_t PppMode::netifOutput(struct netif *netif, struct pbuf *p,
 }
 
 /*
-   Enter PPP mode and wait for the host to start negotiating. Returns false,
-   leaving the modem in command mode, if the NAPT table or the PPP session
-   cannot be set up.
+   Set up PPP mode and wait for the host to start negotiating. Returns
+   false, leaving the modem in command mode, if the NAPT table or the PPP
+   session cannot be set up.
 */
-bool PppMode::switchTo()
+bool PppMode::enter()
 {
   if(!snifNaptInit())
     return false;
@@ -138,15 +138,8 @@ bool PppMode::switchTo()
 
   linkUp = false;
   sessionOver = false;
+  escaped = false;
   snifStartOutput();
-
-  // As before the rewrite: give the host a moment to finish sending the
-  // command line, then discard what is left of it (such as the LF after
-  // the CR), so that it does not start the first frame.
-  yield();
-  delay(999);
-  while(HWSerial.available() > 0)
-    HWSerial.read();
 
   if(ppp_listen(ppp) != ERR_OK)
   {
@@ -154,8 +147,37 @@ bool PppMode::switchTo()
     ppp = 0;
     return false;
   }
+  snifEscapeStart();
   currMode = this;
   snifLogf(PSTR("PPP mode: waiting for the host"));
+  return true;
+}
+
+/* Enter PPP mode by command (AT+PPP, ATDT5517546). */
+bool PppMode::switchTo()
+{
+  // As before the rewrite: give the host a moment to finish sending the
+  // command line, then discard what is left of it (such as the LF after
+  // the CR), so that it does not start the first frame.
+  yield();
+  delay(999);
+  while(HWSerial.available() > 0)
+    HWSerial.read();
+  return enter();
+}
+
+/*
+   Enter PPP mode automatically: command mode has received an LCP
+   Configure-Request (S66), the len bytes at frame as they arrived, flags
+   included. No response is sent, as the host is already speaking PPP; the
+   frame is passed to lwIP, which answers it.
+*/
+bool PppMode::autoEnter(uint8_t *frame, int len)
+{
+  if(!enter())
+    return false;
+  snifLogf(PSTR("PPP mode: entered automatically"));
+  pppos_input(ppp, frame, len);
   return true;
 }
 
@@ -171,6 +193,8 @@ void PppMode::serialIncoming()
     int n = snifRead(chunk, sizeof(chunk));
     if(n <= 0)
       break;
+    for(int i=0; i<n; i++)
+      snifEscapeByte(chunk[i]);
     pppos_input(ppp, chunk, n);
     budget -= n;
   }
@@ -190,12 +214,29 @@ void PppMode::endSession()
     ppp = 0;
   }
   sessionOver = false;
-  snifLogf(PSTR("PPP: session over"));
+  snifAutoReset();
   currMode = &commandMode;
+  if(escaped)
+  {
+    escaped = false;
+    snifLogf(PSTR("PPP: session closed by the escape sequence"));
+    commandMode.sendOfficialResponse(ZNOCARRIER);
+  }
+  else
+    snifLogf(PSTR("PPP: session over"));
 }
 
 void PppMode::loop()
 {
+  if(snifEscaped() && !escaped && (ppp != 0))
+  {
+    // Close the session properly: lwIP sends the host an LCP
+    // Terminate-Request and reports the session over once it is
+    // acknowledged (or after its retries), and endSession() follows.
+    escaped = true;
+    snifLogf(PSTR("PPP: escape sequence, closing the session"));
+    ppp_close(ppp, 0);
+  }
   snifTxDrain();
   if(linkUp)
   {
