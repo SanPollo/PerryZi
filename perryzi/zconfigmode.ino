@@ -24,6 +24,9 @@ void ZConfig::switchTo()
   serial.setFlowControlType(commandMode.serial.getFlowControlType());
   savedEcho=commandMode.doEcho;
   newListen=commandMode.preserveListeners;
+  newAutoSlip=commandMode.autoSlip;
+  newAutoPpp=commandMode.autoPpp;
+  newBlockCasts=commandMode.blockCasts;
   commandMode.doEcho=true;
   serverSpec.port=6502;
   serverSpec.flagsBitmap=commandMode.getConfigFlagBitmap() & (~FLAG_ECHO);
@@ -138,6 +141,14 @@ void ZConfig::doModeCommand()
         currState=ZCFGMENU_BBSMENU;
         showMenu=true;
       }
+#if INCLUDE_SLIP || INCLUDE_PPP
+      else
+      if(c=='s') // slip and ppp
+      {
+        currState=ZCFGMENU_SNIF;
+        showMenu=true;
+      }
+#endif
       else
       if(c>47 && c<58) // its a phonebook entry!
       {
@@ -175,6 +186,9 @@ void ZConfig::doModeCommand()
       else
       if(c=='y')
       {
+        commandMode.autoSlip=newAutoSlip;
+        commandMode.autoPpp=newAutoPpp;
+        commandMode.blockCasts=newBlockCasts;
         if(newListen != commandMode.preserveListeners)
         {
           commandMode.preserveListeners=newListen;
@@ -648,6 +662,36 @@ void ZConfig::doModeCommand()
         serial.setXON(true);
       }
       break;
+#if INCLUDE_SLIP || INCLUDE_PPP
+    case ZCFGMENU_SNIF:
+      // SLIP and PPP settings: each option toggles; ENTER goes back.
+      if(cmd.length()==0)
+        currState=ZCFGMENU_MAIN;
+      else
+#if INCLUDE_SLIP
+      if(c=='s')
+      {
+        newAutoSlip = !newAutoSlip;
+        settingsChanged=true;
+      }
+      else
+#endif
+#if INCLUDE_PPP
+      if(c=='p')
+      {
+        newAutoPpp = !newAutoPpp;
+        settingsChanged=true;
+      }
+      else
+#endif
+      if(c=='b')
+      {
+        newBlockCasts = !newBlockCasts;
+        settingsChanged=true;
+      }
+      showMenu=true;
+      break;
+#endif
   }
 }
 
@@ -688,6 +732,9 @@ void ZConfig::loop()
         serial.printf(F("[FLOW] control: %s%s"),flowName.c_str(),EOLNC);
         serial.printf(F("[ECHO] keystrokes: %s%s"),savedEcho?"ON":"OFF",EOLNC);
         serial.printf(F("[BBS] host: %s%s"),bbsMode.c_str(),EOLNC);
+#if INCLUDE_SLIP || INCLUDE_PPP
+        serial.printf(F("[SLIP] and PPP settings%s"),EOLNC);
+#endif
         serial.printf(F("[PRINT] spec: %s%s"),printMode.getLastPrinterSpec(),EOLNC);
         serial.printf(F("[ADD] new phonebook entry%s"),EOLNC);
         PhoneBookEntry *p = phonebook;
@@ -854,6 +901,25 @@ void ZConfig::loop()
         serial.printf(F("%sYour settings changed. Save (y/N)?"),EOLNC);
         break;
       }
+#if INCLUDE_SLIP || INCLUDE_PPP
+      case ZCFGMENU_SNIF:
+      {
+        serial.printf(F("%sSLIP and PPP settings:%s"),EOLNC,EOLNC);
+#if INCLUDE_SLIP
+        serial.printf(F("[SLIP] automatic entry: %s%s"),
+                      newAutoSlip?"ON":"OFF",EOLNC);
+#endif
+#if INCLUDE_PPP
+        serial.printf(F("[PPP] automatic entry: %s%s"),
+                      newAutoPpp?"ON":"OFF",EOLNC);
+#endif
+        serial.printf(F("[BLOCK] broadcasts and multicasts: %s%s"),
+                      newBlockCasts?"ON":"OFF",EOLNC);
+        serial.printf(F("%sEnter option to toggle or ENTER to exit%s: "),
+                      EOLNC,EOLNC);
+        break;
+      }
+#endif
     }
   }
   if(checkPlusPlusPlusEscape())

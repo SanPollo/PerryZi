@@ -33,7 +33,8 @@ class ZConfig : public ZMode
       ZCFGMENU_NOTES=11,
       ZCFGMENU_NETMENU=12,
       ZCFGMENU_SUBNET=13,
-      ZCFGMENU_NEWPRINT=14
+      ZCFGMENU_NEWPRINT=14,
+      ZCFGMENU_SNIF=15
     } currState;
     
     ZSerial serial; // storage for serial settings only
@@ -50,6 +51,9 @@ class ZConfig : public ZMode
     String lastNotes;
     WiFiServerSpec serverSpec;
     bool newListen;
+    bool newAutoSlip;    // S65, S66 and S67 as changed in the SLIP and PPP
+    bool newAutoPpp;     // settings menu, saved with the rest on leaving
+    bool newBlockCasts;
     bool useDHCP;
     bool settingsChanged=false;
     char netOpt = ' ';

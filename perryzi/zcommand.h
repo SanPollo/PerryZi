@@ -83,7 +83,8 @@ enum ConfigOptions
   CFG_S64_DROPNULL=40,
   CFG_S65_AUTOSLIP=41,
   CFG_S66_AUTOPPP=42,
-  CFG_LAST=42
+  CFG_S67_BLOCKCAST=43,
+  CFG_LAST=43
 };
 
 const ConfigOptions v2HexCfgs[] = {
@@ -192,6 +193,8 @@ class ZCommand : public ZMode
     ZResult doTimeZoneSetupCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber);
 
   public:
+    // SLIP and PPP mode: close every connection first (see serialnetif.h).
+    void dropAllConnections();
     int     packetSize          = 127;
     bool    suppressResponses;
     bool    numericResponses;
@@ -200,6 +203,7 @@ class ZCommand : public ZMode
     bool    dropNull            = false;
     bool    autoSlip            = true;  // S65: a SLIP frame enters SLIP mode
     bool    autoPpp             = true;  // S66: an LCP request enters PPP mode
+    bool    blockCasts          = true;  // S67: no broadcasts to the host
     String  EOLN;
     char    EC                  = '+';
     char    ECS[32];

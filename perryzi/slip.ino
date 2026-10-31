@@ -31,31 +31,15 @@
 
 #if INCLUDE_SLIP
 
-/* lwIP calls this from netif_add() to set the interface up. */
-err_t SlipMode::netifInit(struct netif *netif)
-{
-  netif->name[0] = 's';
-  netif->name[1] = 'l';
-  netif->mtu = SNIF_MTU;
-  // A point-to-point line: no broadcast, no ARP, no link-layer header.
-  netif->flags = 0;
-  netif->output = SlipMode::netifOutput;
-  return ERR_OK;
-}
-
 /*
-   lwIP's output function for the interface: a packet for the host. This
-   may run in the SDK's system context (a packet forwarded from Wi-Fi), so
-   it only encodes the packet into the serial output buffer, which loop()
-   empties. lwIP keeps ownership of p. A packet that does not fit whole is
-   dropped.
+   The mode's output function: an IP packet for the host. This may run in
+   the SDK's system context (a packet from Wi-Fi), so it only encodes the
+   packet into the serial output buffer, which loop() empties. The caller
+   keeps p. Returns false, sending nothing, if the packet does not fit
+   whole.
 */
-err_t SlipMode::netifOutput(struct netif *netif, struct pbuf *p,
-                            const ip4_addr_t *ipaddr)
+bool SlipMode::toHost(struct pbuf *p)
 {
-  (void)ipaddr;
-  SlipMode *mode = (SlipMode *)netif->state;
-
   // The exact encoded size: END at each end, and every END or ESC byte in
   // the packet becomes two bytes.
   int need = p->tot_len + 2;
@@ -69,10 +53,7 @@ err_t SlipMode::netifOutput(struct netif *netif, struct pbuf *p,
     }
   }
   if(need > snifTxFree())
-  {
-    mode->dropped++;
-    return ERR_OK;
-  }
+    return false;
 
   // An END first as well as last, as RFC 1055 suggests, so that any line
   // noise before the packet ends up in a frame of its own and is
@@ -101,46 +82,31 @@ err_t SlipMode::netifOutput(struct netif *netif, struct pbuf *p,
   }
   snifTxPut(SLIP_END);
   internalLedNetActivity();
-  return ERR_OK;
+  return true;
 }
 
 /*
    Set up and start SLIP mode. Returns false, leaving the modem in command
-   mode, if the receive buffer, the NAPT table or the interface cannot be
-   set up.
+   mode, if the receive buffer or lwIP's raw PCBs cannot be had.
 */
 bool SlipMode::enter()
 {
   rxBuf = snifBuffer();
   if(rxBuf == 0)
     return false;
-  if(!snifNaptInit())
+  if(!snifNetStart(SlipMode::toHost))
     return false;
-  if(!netifAdded)
-  {
-    ip4_addr_t addr, mask, gw;
-    SNIF_LOCAL_ADDR(&addr);
-    SNIF_NETMASK(&mask);
-    ip4_addr_set_zero(&gw);
-    if(netif_add(&nif, &addr, &mask, &gw, this, SlipMode::netifInit,
-                 ip_input) == NULL)
-      return false;
-    netifAdded = true;
-    // NAPT applies to packets that arrive on this interface and are
-    // forwarded to another (Wi-Fi).
-    ip_napt_enable_no(nif.num, 1);
-  }
-  netif_set_link_up(&nif);
-  netif_set_up(&nif);
-
   rxLen = 0;
   rxEscaped = false;
   rxDiscard = false;
   snifStartOutput();
   snifEscapeStart();
   currMode = this;
-  snifLogf(PSTR("SLIP mode: interface %c%c%d up"), nif.name[0], nif.name[1],
-           nif.num);
+  ip4_addr_t own;
+  if(snifWifiAddr(&own))
+    snifLogf(PSTR("SLIP mode: host address %s"), ip4addr_ntoa(&own));
+  else
+    snifLogf(PSTR("SLIP mode: no Wi-Fi address yet"));
   return true;
 }
 
@@ -177,9 +143,8 @@ bool SlipMode::autoEnter(int len)
 /* Leave SLIP mode (after the escape sequence), back to command mode. */
 void SlipMode::leave()
 {
-  // Down, so that nothing more is routed to the host; up again on entry.
-  netif_set_down(&nif);
-  netif_set_link_down(&nif);
+  // lwIP handles everything itself again; nothing more for the host.
+  snifNetStop();
   rxLen = 0;
   rxEscaped = false;
   rxDiscard = false;
@@ -234,29 +199,12 @@ void SlipMode::receiveByte(uint8_t c)
 }
 
 /*
-   A complete frame from the host. If it holds a plausible IPv4 packet,
-   pass it to lwIP, which routes it (and checks the header checksum).
+   A complete frame from the host: an IPv4 packet, checked and sent on
+   (see snifFromHost()).
 */
 void SlipMode::deliver()
 {
-  if(rxLen < 20)
-    return;
-  if((rxBuf[0] >> 4) != 4)
-    return;
-  int headerLen = (rxBuf[0] & 0x0F) * 4;
-  int totalLen = (rxBuf[2] << 8) | rxBuf[3];
-  if((headerLen < 20) || (totalLen < headerLen) || (totalLen > rxLen))
-    return;
-  // PBUF_LINK leaves room in front for the Wi-Fi link-layer header, which
-  // is added when lwIP forwards the packet.
-  struct pbuf *p = pbuf_alloc(PBUF_LINK, totalLen, PBUF_RAM);
-  if(p == NULL)
-    return;
-  memcpy(p->payload, rxBuf, totalLen);
-  // ip_input() takes ownership of p unless it reports an error.
-  if(nif.input(p, &nif) != ERR_OK)
-    pbuf_free(p);
-  internalLedNetActivity();
+  snifFromHost(rxBuf, rxLen);
 }
 
 void SlipMode::serialIncoming()
@@ -286,12 +234,7 @@ void SlipMode::loop()
     return;
   }
   snifTxDrain();
-  if(dropped != droppedLogged)
-  {
-    snifLogf(PSTR("SLIP: %lu packets for the host dropped (output full)"),
-             (unsigned long)dropped);
-    droppedLogged = dropped;
-  }
+  snifLogCounters();
   logFileLoop();
 }
 

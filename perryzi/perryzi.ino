@@ -20,7 +20,7 @@
 // ***************************************************************************
 // Global definitions - USER DEFINABLE OPTIONS START ON LINE 61!
 
-#define PERRYZI_VERSION "1.2.6"
+#define PERRYZI_VERSION "1.3.0"
 const char compile_date[] = __DATE__ " " __TIME__;
 #define DEFAULT_NO_DELAY true
 #define null 0
@@ -715,5 +715,11 @@ void loop()
   }
   currMode->loop();
   internalLedTick();
+#if INCLUDE_SLIP || INCLUDE_PPP
+  // In SLIP and PPP mode the host shares the ESP8266's address and ports,
+  // and NTP replies would go to the host, so the clock is not updated from
+  // NTP until the mode ends (see serialnetif.h).
+  if(!snifActive())
+#endif
   zclock.tick();
 }

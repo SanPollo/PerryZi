@@ -142,6 +142,7 @@ void ZCommand::setConfigDefaults()
   preserveListeners=false;
   autoSlip=true;
   autoPpp=true;
+  blockCasts=true;
   ringCounter=1;
   streamMode.setHangupType(HANGUP_NONE);
   serial.setFlowControlType(DEFAULT_FCT);
@@ -398,7 +399,7 @@ bool ZCommand::reSaveConfig(int retries)
   f.printf_P(PSTR("%d,%s,%s,"),printMode.getTimeoutDelayMs(),printSpechex.c_str(),termTypehex.c_str());
   f.printf_P(PSTR("%s,%s,%s,%s,"),staticIPstr.c_str(),staticDNSstr.c_str(),staticGWstr.c_str(),staticSNstr.c_str());
   f.printf_P(PSTR("%s,%d,%d,%d,"),busyMsghex.c_str(),telnetSupport,streamMode.getHangupType(),dropNull);
-  f.printf_P(PSTR("%d,%d"),autoSlip,autoPpp);
+  f.printf_P(PSTR("%d,%d,%d"),autoSlip,autoPpp,blockCasts);
   f.close();
   delay(500);
   if(SPIFFS.exists(CONFIG_FILE))
@@ -522,6 +523,9 @@ void ZCommand::setOptionsFromSavedConfig(String configArguments[])
     autoSlip = atoi(configArguments[CFG_S65_AUTOSLIP].c_str());
   if(configArguments[CFG_S66_AUTOPPP].length()>0)
     autoPpp = atoi(configArguments[CFG_S66_AUTOPPP].c_str());
+  // Nor has a file saved before 1.3.0 an S67: the default (on) stays.
+  if(configArguments[CFG_S67_BLOCKCAST].length()>0)
+    blockCasts = atoi(configArguments[CFG_S67_BLOCKCAST].c_str());
   if(configArguments[CFG_S60_LISTEN].length()>0)
   {
     preserveListeners = atoi(configArguments[CFG_S60_LISTEN].c_str());
@@ -824,6 +828,8 @@ ZResult ZCommand::doInfoCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber
       serial.prints(autoSlip ? F("S65=1") : F("S65=0"));
     if((!autoPpp) || showAll)
       serial.prints(autoPpp ? F("S66=1") : F("S66=0"));
+    if((!blockCasts) || showAll)
+      serial.prints(blockCasts ? F("S67=1") : F("S67=0"));
     if((logFileOpen) || showAll)
       serial.prints((logFileOpen && !logFile2Uart) ? "&O1" : ((logFileOpen && logFile2Uart) ? "&O88" : "&O0"));
     serial.prints(EOLN);
@@ -1815,6 +1821,21 @@ ZResult ZCommand::doAnswerCommand(int vval, uint8_t *vbuf, int vlen, bool isNumb
   }
 }
 
+/*
+   SLIP and PPP mode give the host the ESP8266's address and ports (see
+   serialnetif.h), so every connection is closed when either starts: all
+   of command mode's (as ATH does) and the Espressif layer's link. The
+   listeners are kept; while the mode runs, what arrives for them goes to
+   the host.
+*/
+void ZCommand::dropAllConnections()
+{
+  doHangupCommand(0, NULL, 0, false);
+#ifdef ESPRESSIF_CMDS
+  espCloseLink(false);
+#endif
+}
+
 ZResult ZCommand::doHangupCommand(int vval, uint8_t *vbuf, int vlen, bool isNumber)
 {
   if(vlen == 0)
@@ -1949,6 +1970,8 @@ int ZCommand::getStatusRegister(const int snum, int crc8)
    return autoSlip ? 1 : 0;
  case 66:
    return autoPpp ? 1 : 0;
+ case 67:
+   return blockCasts ? 1 : 0;
  default:
     break;
   }
@@ -2186,6 +2209,9 @@ ZResult ZCommand::setStatusRegister(const int snum, const int sval, int *crc8, c
    break;
  case 66:
    autoPpp = (sval > 0);
+   break;
+ case 67:
+   blockCasts = (sval > 0);
    break;
  default:
     break;
